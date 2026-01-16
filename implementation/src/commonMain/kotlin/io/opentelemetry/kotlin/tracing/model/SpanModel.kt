@@ -251,4 +251,8 @@ internal class SpanModel(
             }
         }
     }
+
+    override fun close() {
+        end()
+    }
 }

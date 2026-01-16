@@ -79,6 +79,10 @@ internal class SpanAdapter(
         impl.end(timestamp, TimeUnit.NANOSECONDS)
     }
 
+    override fun close() {
+        end()
+    }
+
     override fun isRecording(): Boolean = impl.isRecording
 
     override fun addLink(

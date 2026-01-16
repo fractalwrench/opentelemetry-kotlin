@@ -375,7 +375,7 @@ public abstract interface class io/opentelemetry/kotlin/tracing/model/ReadableSp
 	public abstract fun toSpanData ()Lio/opentelemetry/kotlin/tracing/data/SpanData;
 }
 
-public abstract interface class io/opentelemetry/kotlin/tracing/model/Span : io/opentelemetry/kotlin/tracing/data/SpanSchema, io/opentelemetry/kotlin/tracing/model/SpanRelationships {
+public abstract interface class io/opentelemetry/kotlin/tracing/model/Span : io/opentelemetry/kotlin/tracing/data/SpanSchema, io/opentelemetry/kotlin/tracing/model/SpanRelationships, java/lang/AutoCloseable {
 	public abstract fun end ()V
 	public abstract fun end (J)V
 	public abstract fun getName ()Ljava/lang/String;

@@ -59,4 +59,7 @@ internal object NoopSpan : Span {
 
     override fun setDoubleListAttribute(key: String, value: List<Double>) {
     }
+
+    override fun close() {
+    }
 }

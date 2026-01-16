@@ -105,6 +105,17 @@ internal class SpanEndTest {
         assertSpanTimestamp(clock.now())
     }
 
+    @Test
+    fun testSpanAutoCloseable() {
+        val span = tracer.createSpan("test")
+        span.use {
+            assertTrue(span.isRecording())
+        }
+        assertFalse(span.isRecording())
+        span.end()
+        assertEquals(span.name, processor.endCalls.single().name)
+    }
+
     private fun assertSpanTimestamp(timestamp: Long) {
         val readableSpan = processor.startCalls.single()
         assertEquals(timestamp, readableSpan.endTimestamp)

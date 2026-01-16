@@ -28,6 +28,8 @@ import io.opentelemetry.kotlin.tracing.ext.toOtelJavaStatusData
 import org.junit.Test
 import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalApi::class)
 internal class ReadWriteSpanAdapterTest {
@@ -112,6 +114,23 @@ internal class ReadWriteSpanAdapterTest {
                 }
             }
         )
+    }
+
+    @Test
+    fun `span auto closeable`() {
+        val processor = FakeSpanProcessor(
+            startAction = { span, _ ->
+                assertFalse(span.hasEnded)
+            },
+            endAction = { span ->
+                assertTrue(span.hasEnded)
+            },
+        )
+        harness.config.spanProcessors.add(processor)
+        harness.tracer.createSpan("name").use { span ->
+            assertTrue(span.isRecording())
+        }
+        harness.assertSpans(expectedCount = 1)
     }
 
     private fun ReadWriteSpanAdapter.assertImmutableProperties(expected: OtelJavaSpanData) {

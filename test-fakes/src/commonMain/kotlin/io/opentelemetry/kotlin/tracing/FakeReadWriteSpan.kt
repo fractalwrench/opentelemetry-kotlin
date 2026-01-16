@@ -101,4 +101,7 @@ class FakeReadWriteSpan(
     override fun toSpanData(): SpanData {
         throw UnsupportedOperationException()
     }
+
+    override fun close() {
+    }
 }

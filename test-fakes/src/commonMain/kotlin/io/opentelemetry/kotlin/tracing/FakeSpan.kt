@@ -100,4 +100,7 @@ class FakeSpan(
 
     override val attributes: Map<String, Any>
         get() = TODO("Not yet implemented")
+
+    override fun close() {
+    }
 }
