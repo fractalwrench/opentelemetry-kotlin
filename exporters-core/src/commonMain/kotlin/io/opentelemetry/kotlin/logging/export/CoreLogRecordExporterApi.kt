@@ -59,3 +59,11 @@ public fun createBatchLogRecordProcessor(
         exportTimeoutMs,
         maxExportBatchSize
     )
+
+/**
+ * Creates an in-memory log record exporter that stores telemetry in memory.
+ * This is intended for development/testing rather than production use.
+ */
+@ExperimentalApi
+public fun createInMemoryLogRecordExporter(): InMemoryLogRecordExporter =
+    InMemoryLogRecordExporterImpl()

@@ -3,7 +3,12 @@ public final class io/opentelemetry/kotlin/logging/export/CoreLogRecordExporterA
 	public static synthetic fun createBatchLogRecordProcessor$default (Lio/opentelemetry/kotlin/logging/export/LogRecordExporter;IJJIILjava/lang/Object;)Lio/opentelemetry/kotlin/logging/export/LogRecordProcessor;
 	public static final fun createCompositeLogRecordExporter (Ljava/util/List;)Lio/opentelemetry/kotlin/logging/export/LogRecordExporter;
 	public static final fun createCompositeLogRecordProcessor (Ljava/util/List;)Lio/opentelemetry/kotlin/logging/export/LogRecordProcessor;
+	public static final fun createInMemoryLogRecordExporter ()Lio/opentelemetry/kotlin/logging/export/InMemoryLogRecordExporter;
 	public static final fun createSimpleLogRecordProcessor (Lio/opentelemetry/kotlin/logging/export/LogRecordExporter;)Lio/opentelemetry/kotlin/logging/export/LogRecordProcessor;
+}
+
+public abstract interface class io/opentelemetry/kotlin/logging/export/InMemoryLogRecordExporter : io/opentelemetry/kotlin/logging/export/LogRecordExporter {
+	public abstract fun getExportedLogRecords ()Ljava/util/List;
 }
 
 public final class io/opentelemetry/kotlin/tracing/export/CoreSpanExporterApiKt {
@@ -11,6 +16,11 @@ public final class io/opentelemetry/kotlin/tracing/export/CoreSpanExporterApiKt 
 	public static synthetic fun createBatchSpanProcessor$default (Lio/opentelemetry/kotlin/tracing/export/SpanExporter;IJJIILjava/lang/Object;)Lio/opentelemetry/kotlin/tracing/export/SpanProcessor;
 	public static final fun createCompositeSpanExporter (Ljava/util/List;)Lio/opentelemetry/kotlin/tracing/export/SpanExporter;
 	public static final fun createCompositeSpanProcessor (Ljava/util/List;)Lio/opentelemetry/kotlin/tracing/export/SpanProcessor;
+	public static final fun createInMemorySpanExporter ()Lio/opentelemetry/kotlin/tracing/export/InMemorySpanExporter;
 	public static final fun createSimpleSpanProcessor (Lio/opentelemetry/kotlin/tracing/export/SpanExporter;)Lio/opentelemetry/kotlin/tracing/export/SpanProcessor;
+}
+
+public abstract interface class io/opentelemetry/kotlin/tracing/export/InMemorySpanExporter : io/opentelemetry/kotlin/tracing/export/SpanExporter {
+	public abstract fun getExportedSpans ()Ljava/util/List;
 }
 
