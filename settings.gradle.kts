@@ -23,7 +23,6 @@ include(
     ":model",
     ":compat",
     ":platform-implementations",
-    ":testing",
     ":test-fakes",
     ":integration-test",
     ":compat-bom",
