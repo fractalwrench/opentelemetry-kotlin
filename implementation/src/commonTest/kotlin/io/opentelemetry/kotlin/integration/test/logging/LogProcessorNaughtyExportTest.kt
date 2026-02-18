@@ -28,13 +28,13 @@ internal class LogProcessorNaughtyExportTest {
         prepareConfig(processor)
         val ctx = prepareContext()
 
-        harness.logger.log(
+        harness.logger.emit(
             body = "custom_log",
             timestamp = 500,
             observedTimestamp = 600,
+            context = ctx,
             severityNumber = SeverityNumber.WARN2,
             severityText = "warn2",
-            context = ctx,
         ) {
             setStringAttribute("foo", "bar")
             setBooleanAttribute("experiment_enabled", true)
@@ -53,7 +53,7 @@ internal class LogProcessorNaughtyExportTest {
     }
 
     private fun prepareContext(): Context {
-        val span = harness.tracer.createSpan("span")
+        val span = harness.tracer.startSpan("span")
         val contextFactory = harness.kotlinApi.contextFactory
         val ctx = contextFactory.storeSpan(contextFactory.root(), span)
         return ctx

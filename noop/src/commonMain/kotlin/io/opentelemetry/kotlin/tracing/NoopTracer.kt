@@ -8,6 +8,18 @@ import io.opentelemetry.kotlin.tracing.model.SpanRelationships
 
 @ExperimentalApi
 internal object NoopTracer : Tracer {
+    override fun startSpan(
+        name: String,
+        parentContext: Context?,
+        spanKind: SpanKind,
+        startTimestamp: Long?,
+        action: (SpanRelationships.() -> Unit)?
+    ): Span = NoopSpan
+
+    @Deprecated(
+        "Deprecated.",
+        replaceWith = ReplaceWith("startSpan(name, parentContext, spanKind, startTimestamp, action)")
+    )
     override fun createSpan(
         name: String,
         parentContext: Context?,

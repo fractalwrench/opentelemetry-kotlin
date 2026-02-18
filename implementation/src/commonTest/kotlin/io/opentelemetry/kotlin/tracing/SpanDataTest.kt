@@ -56,7 +56,7 @@ internal class SpanDataTest {
     }
 
     private fun simulateSpan(): Span {
-        return tracer.createSpan(
+        return tracer.startSpan(
             name = "test",
             startTimestamp = 5,
             spanKind = SpanKind.CLIENT,

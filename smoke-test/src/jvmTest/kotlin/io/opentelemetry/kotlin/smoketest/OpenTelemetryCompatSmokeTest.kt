@@ -55,12 +55,12 @@ class OpenTelemetryCompatSmokeTest {
     fun exportsSpansAndLogs() = runTest {
         val spanName = "test-span"
         val tracer = otel.tracerProvider.getTracer("test-tracer")
-        val span = tracer.createSpan(spanName)
+        val span = tracer.startSpan(spanName)
         span.end()
 
         val logBody = "test-log-message"
         val logger = otel.loggerProvider.getLogger("test-logger")
-        logger.log(body = logBody)
+        logger.emit(body = logBody)
 
         // assert span received
         val receivedSpan = server.awaitSpan { it.name == spanName }

@@ -11,10 +11,10 @@ class ComplexSpanCreationFixture(
 ) : BenchmarkFixture {
 
     private val tracer = otel.tracerProvider.getTracer("test")
-    private val other = tracer.createSpan("other")
+    private val other = tracer.startSpan("other")
 
     override fun execute() {
-        tracer.createSpan(
+        tracer.startSpan(
             "new_span",
             otel.contextFactory.root(),
             SpanKind.CLIENT,

@@ -17,7 +17,7 @@ import io.opentelemetry.kotlin.tracing.model.SpanRelationships
 public interface Tracer {
 
     /**
-     * Creates a new span. A span must have a non-empty name, and can optionally include:
+     * Creates and starts a new span. A span must have a non-empty name, and can optionally include:
      *
      * @param parentContext - a context object containing the parent span. If this is not set
      * explicitly, the implicit context via [io.opentelemetry.kotlin.factory.ContextFactory.implicitContext] will be used.
@@ -29,6 +29,18 @@ public interface Tracer {
      * https://opentelemetry.io/docs/specs/otel/trace/api/#span
      */
     @ThreadSafe
+    public fun startSpan(
+        name: String,
+        parentContext: Context? = null,
+        spanKind: SpanKind = SpanKind.INTERNAL,
+        startTimestamp: Long? = null,
+        action: (SpanRelationships.() -> Unit)? = null
+    ): Span
+
+    @Deprecated(
+        "Deprecated.",
+        ReplaceWith("startSpan(name, parentContext, spanKind, startTimestamp, action)")
+    )
     public fun createSpan(
         name: String,
         parentContext: Context? = null,

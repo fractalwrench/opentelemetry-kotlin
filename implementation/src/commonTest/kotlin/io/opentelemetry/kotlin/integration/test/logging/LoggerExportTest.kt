@@ -26,7 +26,7 @@ internal class LoggerExportTest {
 
     @Test
     fun testMinimalLogExported() = runTest {
-        harness.logger.log("test") {
+        harness.logger.emit("test") {
             setStringAttribute("foo", "bar")
         }
         harness.assertLogRecords(1, "log_minimal.json")
@@ -34,7 +34,7 @@ internal class LoggerExportTest {
 
     @Test
     fun testLogWithBasicPropertiesExported() = runTest {
-        harness.logger.log(
+        harness.logger.emit(
             body = "custom_log",
             timestamp = 500,
             observedTimestamp = 600,
@@ -46,7 +46,7 @@ internal class LoggerExportTest {
 
     @Test
     fun testLogWithAttributesExported() = runTest {
-        harness.logger.log("test") {
+        harness.logger.emit("test") {
             setStringAttribute("foo", "bar")
             setBooleanAttribute("experiment_enabled", true)
         }
@@ -62,16 +62,16 @@ internal class LoggerExportTest {
         val logger = harness.loggerProvider.getLogger("test", "0.1.0", "https://example.com/bar/") {
             setStringAttribute("instrumentation_scope.foo", "bar")
         }
-        logger.log("test")
+        logger.emit("test")
         harness.assertLogRecords(1, "log_resource_scope.json")
     }
 
     @Test
     fun testLogWithParentSpanInContext() = runTest {
-        val span = harness.tracer.createSpan("span")
+        val span = harness.tracer.startSpan("span")
         val contextFactory = harness.kotlinApi.contextFactory
         val ctx = contextFactory.storeSpan(contextFactory.root(), span)
-        harness.logger.log("test", context = ctx)
+        harness.logger.emit("test", context = ctx)
         harness.assertLogRecords(1, "log_span_context.json")
     }
 
@@ -79,13 +79,13 @@ internal class LoggerExportTest {
     fun testLogWithRootContext() = runTest {
         val contextFactory = harness.kotlinApi.contextFactory
         val ctx = contextFactory.root()
-        harness.logger.log("test", context = ctx)
+        harness.logger.emit("test", context = ctx)
         harness.assertLogRecords(1, "log_root_context.json")
     }
 
     @Test
     fun testAttributeLimitsOnLogExport() = runTest {
-        harness.logger.log("test") {
+        harness.logger.emit("test") {
             repeat(logAttributeLimit + 1) {
                 setStringAttribute("key-$it", "value")
             }
@@ -98,9 +98,9 @@ internal class LoggerExportTest {
     @Test
     fun testEventExport() = runTest {
         val logger = harness.kotlinApi.loggerProvider.getLogger("test_logger")
-        logger.logEvent(
-            eventName = "my_event_name",
+        logger.emit(
             body = "Some Event",
+            eventName = "my_event_name",
             severityNumber = SeverityNumber.WARN4
         ) {
             setStringAttribute("key1", "value1")

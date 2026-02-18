@@ -20,40 +20,16 @@ class FakeLogger(
         eventName: String?,
     ): Boolean = enabledResult()
 
-    override fun log(
+    override fun emit(
         body: String?,
-        timestamp: Long?,
-        observedTimestamp: Long?,
-        context: Context?,
-        severityNumber: SeverityNumber?,
-        severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
-    ) {
-        processTelemetry(null, timestamp, observedTimestamp, severityNumber, severityText, body)
-    }
-
-    override fun logEvent(
-        eventName: String,
-        body: String?,
-        timestamp: Long?,
-        observedTimestamp: Long?,
-        context: Context?,
-        severityNumber: SeverityNumber?,
-        severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
-    ) {
-        processTelemetry(eventName, timestamp, observedTimestamp, severityNumber, severityText, body)
-    }
-
-    private fun processTelemetry(
         eventName: String?,
         timestamp: Long?,
         observedTimestamp: Long?,
+        context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        body: String?
+        attributes: (MutableAttributeContainer.() -> Unit)?
     ) {
-        eventName.toString()
         logs.add(
             FakeReadableLogRecord(
                 timestamp,
@@ -64,5 +40,38 @@ class FakeLogger(
                 eventName,
             )
         )
+    }
+
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, null, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
+    override fun log(
+        body: String?,
+        timestamp: Long?,
+        observedTimestamp: Long?,
+        context: Context?,
+        severityNumber: SeverityNumber?,
+        severityText: String?,
+        attributes: (MutableAttributeContainer.() -> Unit)?
+    ) {
+        throw UnsupportedOperationException()
+    }
+
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, eventName, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
+    override fun logEvent(
+        eventName: String,
+        body: String?,
+        timestamp: Long?,
+        observedTimestamp: Long?,
+        context: Context?,
+        severityNumber: SeverityNumber?,
+        severityText: String?,
+        attributes: (MutableAttributeContainer.() -> Unit)?
+    ) {
+        throw UnsupportedOperationException()
     }
 }

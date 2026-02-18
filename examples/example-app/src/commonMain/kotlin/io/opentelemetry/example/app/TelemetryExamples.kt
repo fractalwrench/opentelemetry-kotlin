@@ -53,7 +53,7 @@ suspend fun runAllExamples(platform: String) {
  * Creates a basic span with no attributes.
  */
 private fun demonstrateBasicSpan(tracer: Tracer) {
-    val span = tracer.createSpan("basic-span")
+    val span = tracer.startSpan("basic-span")
     span.end()
 }
 
@@ -61,7 +61,7 @@ private fun demonstrateBasicSpan(tracer: Tracer) {
  * Creates a complex span with attributes and events.
  */
 private fun demonstrateComplexSpan(tracer: Tracer) {
-    val span = tracer.createSpan(
+    val span = tracer.startSpan(
         name = "http-request",
         spanKind = SpanKind.CLIENT
     ) {
@@ -90,12 +90,12 @@ private fun demonstrateComplexSpan(tracer: Tracer) {
  * Creates nested spans that represent parent-child relationships.
  */
 private fun demonstrateSpanNesting(tracer: Tracer) {
-    val parentSpan = tracer.createSpan("parent-operation") {
+    val parentSpan = tracer.startSpan("parent-operation") {
         setStringAttribute("operation.type", "database-transaction")
     }
 
     // Create first child span (database query)
-    val childSpan1 = tracer.createSpan(
+    val childSpan1 = tracer.startSpan(
         name = "database-query",
         spanKind = SpanKind.INTERNAL
     ) {
@@ -106,7 +106,7 @@ private fun demonstrateSpanNesting(tracer: Tracer) {
     childSpan1.end()
 
     // Create second child span (cache lookup)
-    val childSpan2 = tracer.createSpan("cache-lookup") {
+    val childSpan2 = tracer.startSpan("cache-lookup") {
         setStringAttribute("cache.type", "redis")
     }
     childSpan2.end()
@@ -118,7 +118,7 @@ private fun demonstrateSpanNesting(tracer: Tracer) {
  * Emits a basic log.
  */
 private fun demonstrateBasicLogging(logger: Logger) {
-    logger.log("Application started successfully")
+    logger.emit("Application started successfully")
 }
 
 /**
@@ -136,7 +136,7 @@ private fun demonstrateComplexLogging(logger: Logger) {
     }
 
     // Warning log
-    logger.log(
+    logger.emit(
         body = "Request rate limit approaching threshold",
         severityNumber = SeverityNumber.WARN,
         severityText = "WARN"
@@ -146,7 +146,7 @@ private fun demonstrateComplexLogging(logger: Logger) {
     }
 
     // Error log
-    logger.log(
+    logger.emit(
         body = "Failed to connect to database",
         severityNumber = SeverityNumber.ERROR,
         severityText = "ERROR"

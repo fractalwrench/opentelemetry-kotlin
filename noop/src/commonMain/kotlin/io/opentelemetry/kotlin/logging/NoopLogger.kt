@@ -13,6 +13,22 @@ internal object NoopLogger : Logger {
         eventName: String?,
     ): Boolean = false
 
+    override fun emit(
+        body: String?,
+        eventName: String?,
+        timestamp: Long?,
+        observedTimestamp: Long?,
+        context: Context?,
+        severityNumber: SeverityNumber?,
+        severityText: String?,
+        attributes: (MutableAttributeContainer.() -> Unit)?
+    ) {
+    }
+
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, null, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
     override fun log(
         body: String?,
         timestamp: Long?,
@@ -24,6 +40,10 @@ internal object NoopLogger : Logger {
     ) {
     }
 
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, eventName, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
     override fun logEvent(
         eventName: String,
         body: String?,

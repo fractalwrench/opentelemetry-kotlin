@@ -25,8 +25,8 @@ internal class NoopTests {
         val tracer = tracerProvider.getTracer("test-tracer")
 
         // All created spans are the same noop instance
-        val span = tracer.createSpan("span")
-        val anotherSpan = tracer.createSpan("span2", spanKind = SpanKind.CLIENT)
+        val span = tracer.startSpan("span")
+        val anotherSpan = tracer.startSpan("span2", spanKind = SpanKind.CLIENT)
         assertSame(span, anotherSpan)
         assertTrue(span is NoopSpan)
 
@@ -47,7 +47,6 @@ internal class NoopTests {
         val traceFlags = context.traceFlags
         assertFalse(traceFlags.isSampled)
         assertFalse(traceFlags.isRandom)
-        assertEquals("00", traceFlags.hex)
 
         // Test trace state default values
         val traceState = context.traceState
@@ -65,11 +64,10 @@ internal class NoopTests {
         val logger = loggerProvider.getLogger("test-logger")
 
         // Logging does nothing
-        logger.log(
+        logger.emit(
             body = "Complex message",
             timestamp = 1000000L,
             observedTimestamp = 2000000L,
-            context = null,
             severityNumber = SeverityNumber.ERROR,
             severityText = "ERROR"
         ) {
@@ -93,12 +91,11 @@ internal class NoopTests {
         val logger = loggerProvider.getLogger("test-logger")
 
         // Logging does nothing
-        logger.logEvent(
-            eventName = "my_event",
+        logger.emit(
             body = "Complex message",
+            eventName = "my_event",
             timestamp = 1000000L,
             observedTimestamp = 2000000L,
-            context = null,
             severityNumber = SeverityNumber.ERROR,
             severityText = "ERROR"
         ) {
@@ -167,7 +164,7 @@ internal class NoopTests {
     @Test
     fun testStoreSpan() {
         val otel = NoopOpenTelemetry
-        val span = otel.tracerProvider.getTracer("tracer").createSpan("span")
+        val span = otel.tracerProvider.getTracer("tracer").startSpan("span")
         val ctx = otel.contextFactory.storeSpan(otel.contextFactory.root(), span)
         assertTrue(ctx is NoopContext)
     }

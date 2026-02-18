@@ -40,6 +40,10 @@ internal class LoggerImpl(
         return processor.enabled(ctx, key, severityNumber, eventName)
     }
 
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, null, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
     override fun log(
         body: String?,
         timestamp: Long?,
@@ -49,18 +53,21 @@ internal class LoggerImpl(
         severityText: String?,
         attributes: (MutableAttributeContainer.() -> Unit)?
     ) {
-        processTelemetry(
-            context = context,
+        emit(
+            body = body,
             timestamp = timestamp,
             observedTimestamp = observedTimestamp,
-            body = body,
-            eventName = null,
-            severityText = severityText,
+            context = context,
             severityNumber = severityNumber,
+            severityText = severityText,
             attributes = attributes
         )
     }
 
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, eventName, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
     override fun logEvent(
         eventName: String,
         body: String?,
@@ -71,26 +78,26 @@ internal class LoggerImpl(
         severityText: String?,
         attributes: (MutableAttributeContainer.() -> Unit)?
     ) {
-        processTelemetry(
-            context = context,
-            timestamp = timestamp,
-            observedTimestamp = observedTimestamp,
+        emit(
             body = body,
             eventName = eventName,
-            severityText = severityText,
+            timestamp = timestamp,
+            observedTimestamp = observedTimestamp,
+            context = context,
             severityNumber = severityNumber,
+            severityText = severityText,
             attributes = attributes
         )
     }
 
-    private fun processTelemetry(
-        context: Context?,
-        timestamp: Long?,
-        observedTimestamp: Long?,
+    override fun emit(
         body: String?,
         eventName: String?,
-        severityText: String?,
+        timestamp: Long?,
+        observedTimestamp: Long?,
+        context: Context?,
         severityNumber: SeverityNumber?,
+        severityText: String?,
         attributes: (MutableAttributeContainer.() -> Unit)?
     ) {
         val ctx = context ?: contextFactory.implicitContext()
@@ -98,7 +105,6 @@ internal class LoggerImpl(
             root -> invalidSpanContext
             else -> spanFactory.fromContext(ctx).spanContext
         }
-
         val now = clock.now()
         val log = LogRecordModel(
             resource = resource,

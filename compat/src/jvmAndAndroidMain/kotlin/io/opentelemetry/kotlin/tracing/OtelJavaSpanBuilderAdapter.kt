@@ -93,7 +93,7 @@ internal class OtelJavaSpanBuilderAdapter(
     }
 
     override fun startSpan(): OtelJavaSpan {
-        val span = tracer.createSpan(
+        val span = tracer.startSpan(
             name = spanName,
             spanKind = kind.toOtelKotlinSpanKind(),
             startTimestamp = start,

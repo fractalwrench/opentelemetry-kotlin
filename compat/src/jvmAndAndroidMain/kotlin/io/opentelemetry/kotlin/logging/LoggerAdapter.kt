@@ -25,6 +25,10 @@ internal class LoggerAdapter(
         return true
     }
 
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, null, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
     override fun log(
         body: String?,
         timestamp: Long?,
@@ -34,8 +38,7 @@ internal class LoggerAdapter(
         severityText: String?,
         attributes: (MutableAttributeContainer.() -> Unit)?
     ) {
-        processTelemetry(
-            eventName = null,
+        emit(
             body = body,
             timestamp = timestamp,
             observedTimestamp = observedTimestamp,
@@ -46,6 +49,10 @@ internal class LoggerAdapter(
         )
     }
 
+    @Deprecated(
+        "Deprecated",
+        replaceWith = ReplaceWith("emit(body, eventName, timestamp, observedTimestamp, context, severityNumber, severityText, attributes)")
+    )
     override fun logEvent(
         eventName: String,
         body: String?,
@@ -56,9 +63,9 @@ internal class LoggerAdapter(
         severityText: String?,
         attributes: (MutableAttributeContainer.() -> Unit)?
     ) {
-        processTelemetry(
-            eventName = eventName,
+        emit(
             body = body,
+            eventName = eventName,
             timestamp = timestamp,
             observedTimestamp = observedTimestamp,
             context = context,
@@ -68,9 +75,9 @@ internal class LoggerAdapter(
         )
     }
 
-    private fun processTelemetry(
-        eventName: String?,
+    override fun emit(
         body: String?,
+        eventName: String?,
         timestamp: Long?,
         observedTimestamp: Long?,
         context: Context?,

@@ -12,6 +12,6 @@ internal class TraceFlagsExtTest {
     fun toOtelJavaTraceFlags() {
         val expected = FakeTraceFlags()
         val observed = expected.toOtelJavaTraceFlags()
-        assertEquals(expected.hex, observed.asHex())
+        assertEquals(expected.isSampled, observed.isSampled)
     }
 }

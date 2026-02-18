@@ -119,7 +119,7 @@ fun LogScreen(otel: OpenTelemetry) {
 }
 
 private fun emitLog(otel: OpenTelemetry, form: LogFormState) {
-    otel.loggerProvider.getLogger(AppConfig.APP_NAME).log(
+    otel.loggerProvider.getLogger(AppConfig.APP_NAME).emit(
         body = form.body.ifBlank { null },
         timestamp = form.timestamp.toLongOrNull(),
         observedTimestamp = form.observedTimestamp.toLongOrNull(),

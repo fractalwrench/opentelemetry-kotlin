@@ -75,7 +75,7 @@ internal class OtelJavaLogRecordBuilderAdapter(private val impl: Logger) :
     }
 
     override fun emit() {
-        impl.log(
+        impl.emit(
             body = body,
             timestamp = timestamp,
             observedTimestamp = observedTimestamp,

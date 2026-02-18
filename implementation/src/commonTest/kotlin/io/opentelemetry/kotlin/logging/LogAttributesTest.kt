@@ -49,7 +49,7 @@ internal class LogAttributesTest {
 
     @Test
     fun testDefaultLogAttributes() {
-        logger.log("test")
+        logger.emit(eventName = "test")
         val log = processor.logs.single()
         assertTrue(log.attributes.isEmpty())
 
@@ -59,7 +59,7 @@ internal class LogAttributesTest {
 
     @Test
     fun testAddAttributesDuringLogCreation() {
-        logger.log("test") {
+        logger.emit(eventName = "test") {
             addTestAttributes()
         }
         val log = processor.logs.single()
@@ -68,7 +68,7 @@ internal class LogAttributesTest {
 
     @Test
     fun testAddAttributesAfterLogCreation() {
-        logger.log("test")
+        logger.emit(eventName = "test")
         val log = processor.logs.single()
         log.addTestAttributes()
         assertEquals(expected, log.attributes)
@@ -76,7 +76,7 @@ internal class LogAttributesTest {
 
     @Test
     fun testAttributesLimitNotExceeded() {
-        logger.log("test") {
+        logger.emit(eventName = "test") {
             addTestAttributesAlternateValues()
             addTestAttributes()
             addTestAttributes("xyz")
@@ -87,7 +87,7 @@ internal class LogAttributesTest {
 
     @Test
     fun testAttributesLimitNotExceeded2() {
-        logger.log("test")
+        logger.emit(eventName = "test")
         val log = processor.logs.single()
         log.addTestAttributesAlternateValues()
         log.addTestAttributes()

@@ -42,7 +42,7 @@ internal class LogSimplePropertiesTest {
     fun testMinimalLog() {
         val now = 5L
         clock.time = now
-        logger.log()
+        logger.emit()
 
         val log = processor.logs.single()
         assertNull(log.body)
@@ -56,7 +56,7 @@ internal class LogSimplePropertiesTest {
     fun testLogProperties() {
         val body = "Hello, World!"
         val severityText = "INFO"
-        logger.log(
+        logger.emit(
             body = body,
             timestamp = 2,
             observedTimestamp = 3,

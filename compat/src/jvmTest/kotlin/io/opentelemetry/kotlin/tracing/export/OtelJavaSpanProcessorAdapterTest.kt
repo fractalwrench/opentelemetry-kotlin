@@ -34,7 +34,7 @@ internal class OtelJavaSpanProcessorAdapterTest {
     fun `span propagated correctly`() {
         with(harness) {
             val fakeTime = 5_000_000L
-            val span = tracer.createSpan(
+            val span = tracer.startSpan(
                 name = "test",
                 spanKind = SpanKind.CLIENT,
                 startTimestamp = fakeTime,
@@ -70,8 +70,8 @@ internal class OtelJavaSpanProcessorAdapterTest {
     @Test
     fun `parent context propagated correctly`() {
         with(harness) {
-            val parentSpan = tracer.createSpan("parent")
-            val childSpan = tracer.createSpan(
+            val parentSpan = tracer.startSpan("parent")
+            val childSpan = tracer.startSpan(
                 name = "name",
                 parentContext = parentSpan.storeInContext(rootContext)
             )
