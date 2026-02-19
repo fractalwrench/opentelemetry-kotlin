@@ -2,7 +2,7 @@ package io.opentelemetry.kotlin.tracing.model
 
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.ThreadSafe
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
+import io.opentelemetry.kotlin.attributes.WritableAttributes
 import io.opentelemetry.kotlin.tracing.data.LinkData
 
 /**
@@ -12,4 +12,4 @@ import io.opentelemetry.kotlin.tracing.data.LinkData
  */
 @ExperimentalApi
 @ThreadSafe
-public interface Link : LinkData, MutableAttributeContainer
+public interface Link : LinkData, WritableAttributes

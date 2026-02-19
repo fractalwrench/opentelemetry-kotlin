@@ -3,9 +3,9 @@ package io.opentelemetry.kotlin.attributes
 import io.opentelemetry.kotlin.ExperimentalApi
 
 @OptIn(ExperimentalApi::class)
-class FakeMutableAttributeContainer(
+class FakeWritableAttributes(
     private val map: MutableMap<String, Any> = mutableMapOf()
-) : MutableAttributeContainer {
+) : WritableAttributes {
 
     override fun setBooleanAttribute(key: String, value: Boolean) {
         map[key] = value
@@ -51,6 +51,6 @@ class FakeMutableAttributeContainer(
         map[key] = value
     }
 
-    override val attributes: Map<String, Any>
+    val attributes: Map<String, Any>
         get() = map.toMap()
 }

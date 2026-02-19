@@ -10,7 +10,7 @@ import io.opentelemetry.kotlin.ThreadSafe
  */
 @ExperimentalApi
 @ThreadSafe
-public interface AttributeContainer {
+public interface ReadableAttributes {
 
     /**
      * Returns a snapshot of the attributes as a map.

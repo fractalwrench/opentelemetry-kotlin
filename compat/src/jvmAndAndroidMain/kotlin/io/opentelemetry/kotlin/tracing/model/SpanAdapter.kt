@@ -8,11 +8,11 @@ import io.opentelemetry.kotlin.aliases.OtelJavaImplicitContextKeyed
 import io.opentelemetry.kotlin.aliases.OtelJavaScope
 import io.opentelemetry.kotlin.aliases.OtelJavaSpan
 import io.opentelemetry.kotlin.aliases.OtelJavaSpanContext
-import io.opentelemetry.kotlin.attributes.CompatMutableAttributeContainer
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
+import io.opentelemetry.kotlin.attributes.CompatAttributesModel
+import io.opentelemetry.kotlin.attributes.WritableAttributes
 import io.opentelemetry.kotlin.init.CompatSpanLimitsConfig
-import io.opentelemetry.kotlin.tracing.LinkImpl
-import io.opentelemetry.kotlin.tracing.SpanEventImpl
+import io.opentelemetry.kotlin.tracing.LinkCompatImpl
+import io.opentelemetry.kotlin.tracing.SpanEventCompatImpl
 import io.opentelemetry.kotlin.tracing.data.EventData
 import io.opentelemetry.kotlin.tracing.data.LinkData
 import io.opentelemetry.kotlin.tracing.data.StatusData
@@ -83,14 +83,14 @@ internal class SpanAdapter(
 
     override fun addLink(
         spanContext: SpanContext,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
-        val container = CompatMutableAttributeContainer()
+        val container = CompatAttributesModel()
         if (attributes != null) {
             attributes(container)
         }
         if (linksImpl.size < spanLimitsConfig.linkCountLimit) {
-            linksImpl.add(LinkImpl(spanContext, container))
+            linksImpl.add(LinkCompatImpl(spanContext, container))
         }
         impl.addLink(spanContext.toOtelJavaSpanContext(), container.otelJavaAttributes())
     }
@@ -98,15 +98,15 @@ internal class SpanAdapter(
     override fun addEvent(
         name: String,
         timestamp: Long?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
-        val container = CompatMutableAttributeContainer()
+        val container = CompatAttributesModel()
         if (attributes != null) {
             attributes(container)
         }
         val time = timestamp ?: clock.now()
         if (eventsImpl.size < spanLimitsConfig.eventCountLimit) {
-            eventsImpl.add(SpanEventImpl(name, time, container))
+            eventsImpl.add(SpanEventCompatImpl(name, time, container))
         }
         impl.addEvent(name, container.otelJavaAttributes(), time, TimeUnit.NANOSECONDS)
     }

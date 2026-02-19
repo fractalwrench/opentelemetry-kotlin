@@ -3,7 +3,7 @@ package io.opentelemetry.kotlin.logging
 import io.opentelemetry.kotlin.Clock
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.InstrumentationScopeInfo
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
+import io.opentelemetry.kotlin.attributes.WritableAttributes
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.factory.SdkFactory
 import io.opentelemetry.kotlin.init.config.LogLimitConfig
@@ -54,7 +54,7 @@ internal class LoggerImpl(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
         processTelemetry(
             context = context,
@@ -83,7 +83,7 @@ internal class LoggerImpl(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
         processTelemetry(
             context = context,
@@ -105,7 +105,7 @@ internal class LoggerImpl(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
         processTelemetry(
             context = context,
@@ -127,7 +127,7 @@ internal class LoggerImpl(
         eventName: String?,
         severityText: String?,
         severityNumber: SeverityNumber?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
         val ctx = context ?: contextFactory.implicitContext()
         val spanContext = when (ctx) {

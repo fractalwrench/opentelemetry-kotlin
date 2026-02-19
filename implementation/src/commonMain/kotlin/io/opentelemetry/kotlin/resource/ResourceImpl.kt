@@ -1,13 +1,13 @@
 package io.opentelemetry.kotlin.resource
 
 import io.opentelemetry.kotlin.ExperimentalApi
+import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.attributes.DEFAULT_ATTRIBUTE_LIMIT
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainerImpl
+import io.opentelemetry.kotlin.attributes.ReadableAttributes
 
 @OptIn(ExperimentalApi::class)
 internal class ResourceImpl(
-    container: MutableAttributeContainer,
+    container: ReadableAttributes,
     override val schemaUrl: String?,
 ) : Resource {
 
@@ -16,7 +16,7 @@ internal class ResourceImpl(
     override fun asNewResource(action: MutableResource.() -> Unit): Resource {
         val impl = MutableResourceImpl(attributes.limit(), schemaUrl)
         impl.apply(action)
-        val container = MutableAttributeContainerImpl(attrs = impl.attributes.limit())
+        val container = AttributesModel(attrs = impl.attributes.limit())
         return ResourceImpl(container, impl.schemaUrl)
     }
 

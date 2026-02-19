@@ -10,7 +10,7 @@ import io.opentelemetry.kotlin.ThreadSafe
  */
 @ExperimentalApi
 @ThreadSafe
-public interface MutableAttributeContainer : AttributeContainer {
+public interface WritableAttributes {
 
     /**
      * Sets an attribute with a boolean value.

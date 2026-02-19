@@ -5,7 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalApi::class)
-internal class MutableAttributeContainerImplTest {
+internal class AttributesModelTest {
 
     private val attributeLimit = 8
     private val expected = mapOf(
@@ -21,7 +21,7 @@ internal class MutableAttributeContainerImplTest {
 
     @Test
     fun testAttributes() {
-        val attrs = MutableAttributeContainerImpl(attributeLimit).apply {
+        val attrs = AttributesModel(attributeLimit).apply {
             addTestAttributes()
         }.attributes
         assertEquals(expected, attrs)
@@ -29,7 +29,7 @@ internal class MutableAttributeContainerImplTest {
 
     @Test
     fun testAttributesDoNotExceedLimit() {
-        val attrs = MutableAttributeContainerImpl(attributeLimit).apply {
+        val attrs = AttributesModel(attributeLimit).apply {
             addTestAttributesAlternateValues()
             addTestAttributes("xyz")
             addTestAttributes()
@@ -37,7 +37,7 @@ internal class MutableAttributeContainerImplTest {
         assertEquals(expected, attrs)
     }
 
-    private fun MutableAttributeContainer.addTestAttributes(keyToken: String = "") {
+    private fun WritableAttributes.addTestAttributes(keyToken: String = "") {
         setStringAttribute("string$keyToken", "value")
         setDoubleAttribute("double$keyToken", 3.14)
         setBooleanAttribute("boolean$keyToken", true)
@@ -48,7 +48,7 @@ internal class MutableAttributeContainerImplTest {
         setLongListAttribute("long_list$keyToken", listOf(90000000000000))
     }
 
-    private fun MutableAttributeContainer.addTestAttributesAlternateValues() {
+    private fun WritableAttributes.addTestAttributesAlternateValues() {
         setStringAttribute("string", "override")
         setDoubleAttribute("double", 5.4)
         setBooleanAttribute("boolean", false)

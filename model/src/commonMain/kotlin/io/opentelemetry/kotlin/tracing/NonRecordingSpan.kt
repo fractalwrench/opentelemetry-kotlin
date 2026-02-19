@@ -1,7 +1,7 @@
 package io.opentelemetry.kotlin.tracing
 
 import io.opentelemetry.kotlin.ExperimentalApi
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
+import io.opentelemetry.kotlin.attributes.WritableAttributes
 import io.opentelemetry.kotlin.tracing.data.EventData
 import io.opentelemetry.kotlin.tracing.data.LinkData
 import io.opentelemetry.kotlin.tracing.data.StatusData
@@ -51,14 +51,14 @@ class NonRecordingSpan(
 
     override fun addLink(
         spanContext: SpanContext,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
     }
 
     override fun addEvent(
         name: String,
         timestamp: Long?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (WritableAttributes.() -> Unit)?
     ) {
     }
 

@@ -2,7 +2,7 @@ package io.opentelemetry.kotlin.logging
 
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.ThreadSafe
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
+import io.opentelemetry.kotlin.attributes.WritableAttributes
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.logging.model.SeverityNumber
 
@@ -46,7 +46,7 @@ public interface Logger {
         context: Context? = null,
         severityNumber: SeverityNumber? = null,
         severityText: String? = null,
-        attributes: (MutableAttributeContainer.() -> Unit)? = null,
+        attributes: (WritableAttributes.() -> Unit)? = null,
     )
 
     @Deprecated(
@@ -64,7 +64,7 @@ public interface Logger {
         context: Context? = null,
         severityNumber: SeverityNumber? = null,
         severityText: String? = null,
-        attributes: (MutableAttributeContainer.() -> Unit)? = null,
+        attributes: (WritableAttributes.() -> Unit)? = null,
     )
 
     /**
@@ -87,6 +87,6 @@ public interface Logger {
         context: Context? = null,
         severityNumber: SeverityNumber? = null,
         severityText: String? = null,
-        attributes: (MutableAttributeContainer.() -> Unit)? = null,
+        attributes: (WritableAttributes.() -> Unit)? = null,
     )
 }

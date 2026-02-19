@@ -5,11 +5,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalApi::class)
-internal class AttributeContainerExtTest {
+internal class ReadableAttributesExtTest {
 
     @Test
     fun testSetAttributes() {
-        val attrs = FakeMutableAttributeContainer()
+        val attrs = FakeWritableAttributes()
         val input = mapOf(
             "string" to "value",
             "long" to 5L,
@@ -41,9 +41,9 @@ internal class AttributeContainerExtTest {
         override fun toString(): String = "ComplexObject"
     }
 
-    private class FakeMutableAttributeContainer(
-        override val attributes: MutableMap<String, Any> = mutableMapOf()
-    ) : MutableAttributeContainer {
+    private class FakeWritableAttributes(
+        val attributes: MutableMap<String, Any> = mutableMapOf()
+    ) : WritableAttributes {
         override fun setBooleanAttribute(key: String, value: Boolean) {
             attributes[key] = value
         }

@@ -1,7 +1,7 @@
 package io.opentelemetry.kotlin.tracing.sampling
 
 import io.opentelemetry.kotlin.ExperimentalApi
-import io.opentelemetry.kotlin.attributes.AttributeContainer
+import io.opentelemetry.kotlin.attributes.ReadableAttributes
 import io.opentelemetry.kotlin.tracing.model.TraceState
 
 /**
@@ -35,7 +35,7 @@ public interface SamplingResult {
     /**
      * The attributes that were added to the span.
      */
-    public val attributes: AttributeContainer
+    public val attributes: ReadableAttributes
 
     /**
      * The [TraceState] that will be associated with the [io.opentelemetry.kotlin.tracing.model.Span]

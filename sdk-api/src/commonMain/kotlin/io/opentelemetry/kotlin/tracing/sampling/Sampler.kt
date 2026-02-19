@@ -1,7 +1,7 @@
 package io.opentelemetry.kotlin.tracing.sampling
 
 import io.opentelemetry.kotlin.ExperimentalApi
-import io.opentelemetry.kotlin.attributes.AttributeContainer
+import io.opentelemetry.kotlin.attributes.ReadableAttributes
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.tracing.model.Link
 import io.opentelemetry.kotlin.tracing.model.SpanKind
@@ -30,7 +30,7 @@ public interface Sampler {
         traceId: String,
         name: String,
         spanKind: SpanKind,
-        attributes: AttributeContainer,
+        attributes: ReadableAttributes,
         links: List<Link>,
     ): SamplingResult
 
