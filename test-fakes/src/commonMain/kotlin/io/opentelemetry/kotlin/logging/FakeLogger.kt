@@ -1,6 +1,6 @@
 package io.opentelemetry.kotlin.logging
 
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
+import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.logging.model.FakeReadableLogRecord
 import io.opentelemetry.kotlin.logging.model.SeverityNumber
@@ -32,7 +32,7 @@ class FakeLogger(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (AttributesMutator.() -> Unit)?
     ) {
         processTelemetry(null, timestamp, observedTimestamp, severityNumber, severityText, body)
     }
@@ -52,7 +52,7 @@ class FakeLogger(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (AttributesMutator.() -> Unit)?
     ) {
         processTelemetry(eventName, timestamp, observedTimestamp, severityNumber, severityText, body)
     }
@@ -65,7 +65,7 @@ class FakeLogger(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (AttributesMutator.() -> Unit)?
     ) {
         processTelemetry(eventName, timestamp, observedTimestamp, severityNumber, severityText, body)
     }

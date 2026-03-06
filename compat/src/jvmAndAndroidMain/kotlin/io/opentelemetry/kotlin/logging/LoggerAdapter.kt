@@ -2,8 +2,8 @@ package io.opentelemetry.kotlin.logging
 
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.aliases.OtelJavaLogger
+import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.attributes.CompatAttributesModel
-import io.opentelemetry.kotlin.attributes.MutableAttributeContainer
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.context.OtelJavaContextAdapter
 import io.opentelemetry.kotlin.context.OtelJavaContextKeyRepository
@@ -39,7 +39,7 @@ internal class LoggerAdapter(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (AttributesMutator.() -> Unit)?
     ) {
         processTelemetry(
             eventName = null,
@@ -68,7 +68,7 @@ internal class LoggerAdapter(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (AttributesMutator.() -> Unit)?
     ) {
         processTelemetry(
             eventName = eventName,
@@ -90,7 +90,7 @@ internal class LoggerAdapter(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (AttributesMutator.() -> Unit)?
     ) {
         processTelemetry(
             eventName = eventName,
@@ -112,7 +112,7 @@ internal class LoggerAdapter(
         context: Context?,
         severityNumber: SeverityNumber?,
         severityText: String?,
-        attributes: (MutableAttributeContainer.() -> Unit)?
+        attributes: (AttributesMutator.() -> Unit)?
     ) {
         val builder = impl.logRecordBuilder()
 
