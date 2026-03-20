@@ -4,6 +4,7 @@ import io.opentelemetry.kotlin.Clock
 import io.opentelemetry.kotlin.InstrumentationScopeInfo
 import io.opentelemetry.kotlin.NoopOpenTelemetry
 import io.opentelemetry.kotlin.attributes.AttributesModel
+import io.opentelemetry.kotlin.attributes.setAttributes
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.export.ShutdownState
 import io.opentelemetry.kotlin.factory.ContextFactory
@@ -65,19 +66,19 @@ internal class TracerImpl(
             }
             val spanIdBytes = idGenerator.generateSpanIdBytes()
 
-            val decision = sampler.shouldSample(
+            val result = sampler.shouldSample(
                 context = ctx,
                 traceId = traceIdBytes.toHexString(),
                 name = name,
                 spanKind = spanKind,
                 attributes = AttributesModel(),
                 links = emptyList(),
-            ).decision
+            )
 
-            val sampled = decision == SamplingResult.Decision.RECORD_AND_SAMPLE
+            val sampled = result.decision == SamplingResult.Decision.RECORD_AND_SAMPLE
             val spanContext = calculateSpanContext(traceIdBytes, spanIdBytes, sampled)
 
-            if (decision == SamplingResult.Decision.DROP) {
+            if (result.decision == SamplingResult.Decision.DROP) {
                 return@ifActiveOrElse NonRecordingSpan(parentSpanContext, spanContext)
             }
 
@@ -93,6 +94,7 @@ internal class TracerImpl(
                 spanContext = spanContext,
                 spanLimitConfig = spanLimitConfig
             )
+            spanModel.setAttributes(result.attributes)
             if (action != null) {
                 action(spanModel)
             }
@@ -103,13 +105,13 @@ internal class TracerImpl(
     private fun calculateSpanContext(
         traceIdBytes: ByteArray,
         spanIdBytes: ByteArray,
-        isSampled: Boolean = true
+        sampled: Boolean,
     ): SpanContext {
         return SpanContextImpl(
             traceIdBytes = traceIdBytes,
             spanIdBytes = spanIdBytes,
             traceFlags = when {
-                isSampled -> traceFlagsDefault
+                sampled -> traceFlagsDefault
                 else -> TraceFlagsImpl(isSampled = false, isRandom = false)
             },
             isValid = true,
