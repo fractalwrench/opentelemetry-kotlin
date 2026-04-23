@@ -75,6 +75,18 @@ internal class AttributesModel(
 
     private fun canAddAttribute(key: String): Boolean =
         key.isNotEmpty() && (attrs.size < attributeLimit || attrs.contains(key))
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is AttributesModel) {
+            return false
+        }
+        return attrs == other.attrs
+    }
+
+    override fun hashCode(): Int = attrs.hashCode()
 }
 
 internal const val DEFAULT_ATTRIBUTE_LIMIT: Int = 128
