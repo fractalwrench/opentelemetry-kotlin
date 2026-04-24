@@ -21,6 +21,7 @@ public fun AttributesMutator.setAttributes(attributes: Map<String, Any>) {
             is Double -> setDoubleAttribute(it.key, input)
             is Float -> setDoubleAttribute(it.key, input.toDouble())
             is Number -> setLongAttribute(it.key, input.toLong())
+            is ByteArray -> setByteArrayAttribute(it.key, input)
             is Collection<*> -> handleCollection(it.key, input.toList())
             is Array<*> -> handleCollection(it.key, input.toList())
             else -> setStringAttribute(it.key, it.value.toString())

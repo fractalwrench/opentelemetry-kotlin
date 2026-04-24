@@ -3,6 +3,7 @@ package io.opentelemetry.kotlin.export.conversion
 import io.opentelemetry.proto.common.v1.AnyValue
 import io.opentelemetry.proto.common.v1.ArrayValue
 import io.opentelemetry.proto.common.v1.KeyValue
+import okio.ByteString
 
 fun Map<String, Any>.createKeyValues(): List<KeyValue> = map(::createKeyValue)
 
@@ -21,6 +22,7 @@ private fun AnyValue.toAttributeValue(): Any? = when {
     int_value != null -> int_value
     double_value != null -> double_value
     bool_value != null -> bool_value
+    bytes_value != null -> bytes_value.toByteArray()
     array_value != null -> array_value.values.mapNotNull(AnyValue::toAttributeValue)
     else -> null
 }
@@ -37,6 +39,7 @@ private fun convertAttributeValue(value: Any): AnyValue = when (value) {
     is Float -> AnyValue(double_value = value.toDouble())
     is Number -> AnyValue(int_value = value.toLong())
     is Boolean -> AnyValue(bool_value = value)
+    is ByteArray -> AnyValue(bytes_value = ByteString.of(*value))
     is List<*> -> AnyValue(array_value = handleList(value as List<Any>))
     else -> throw UnsupportedOperationException()
 }
