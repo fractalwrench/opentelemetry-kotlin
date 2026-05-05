@@ -18,6 +18,8 @@ class FakePropagatorFactory : PropagatorFactory {
 
     override fun w3cBaggage(): TextMapPropagator = FakeTextMapPropagator
 
+    override fun w3cTraceContext(): TextMapPropagator = FakeTextMapPropagator
+
     private object FakeTextMapPropagator : TextMapPropagator {
         override fun fields(): Collection<String> = emptyList()
         override fun <T> inject(context: Context, carrier: T, setter: TextMapSetter<T>) {}

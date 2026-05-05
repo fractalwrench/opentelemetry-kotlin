@@ -47,11 +47,18 @@ internal fun createOpenTelemetryImpl(
     val traceFlags = TraceFlagsFactoryImpl()
     val traceState = TraceStateFactoryImpl()
     val spanContext = SpanContextFactoryImpl(idGenerator, traceFlags, traceState)
-    val contextFactory = ContextFactoryImpl()
-    val span = SpanFactoryImpl(spanContext, contextFactory.spanKey)
-    val propagatorFactory = PropagatorFactoryImpl()
 
     val cfg = OpenTelemetryConfigImpl(clock).apply(config)
+    val contextFactory = ContextFactoryImpl(cfg.contextConfig::generateStorage)
+    val span = SpanFactoryImpl(spanContext, contextFactory.spanKey)
+    val propagatorFactory = PropagatorFactoryImpl(
+        traceFlags,
+        traceState,
+        spanContext,
+        span,
+        contextFactory
+    )
+
     val tracingConfig = cfg.generateTracingConfig()
     val loggingConfig = cfg.generateLoggingConfig()
     return OpenTelemetryImpl(
