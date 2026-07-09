@@ -108,9 +108,16 @@ internal class SpanModel(
 
     private val eventsList = mutableListOf<SpanEventData>()
 
+    private var droppedEventsCountImpl = 0
+
     override val events: List<SpanEventData>
         get() = lock.read {
             eventsList.toList()
+        }
+
+    override val droppedEventsCount: Int
+        get() = lock.read {
+            droppedEventsCountImpl
         }
 
     private val linksList = initialLinks.toMutableList<SpanLinkData>()
@@ -144,16 +151,20 @@ internal class SpanModel(
         attributes: (AttributesMutator.() -> Unit)?
     ) {
         lock.write {
-            if (isRecording() && eventsList.size < spanLimitConfig.eventCountLimit) {
-                val container = AttributesModel(
-                    attributeLimit = spanLimitConfig.attributeCountPerEventLimit,
-                    attributeValueLengthLimit = spanLimitConfig.attributeValueLengthLimit
-                )
-                if (attributes != null) {
-                    attributes(container)
+            if (isRecording()) {
+                if (eventsList.size < spanLimitConfig.eventCountLimit) {
+                    val container = AttributesModel(
+                        attributeLimit = spanLimitConfig.attributeCountPerEventLimit,
+                        attributeValueLengthLimit = spanLimitConfig.attributeValueLengthLimit
+                    )
+                    if (attributes != null) {
+                        attributes(container)
+                    }
+                    val event = SpanEventImpl(name, timestamp ?: clock.now(), container)
+                    eventsList.add(event)
+                } else {
+                    droppedEventsCountImpl++
                 }
-                val event = SpanEventImpl(name, timestamp ?: clock.now(), container)
-                eventsList.add(event)
             }
         }
     }
@@ -168,6 +179,7 @@ internal class SpanModel(
         endTimestamp,
         attributes,
         events,
+        droppedEventsCount,
         links,
         resource,
         instrumentationScopeInfo,

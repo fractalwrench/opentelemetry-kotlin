@@ -25,6 +25,7 @@ internal class SpanDataAdapter(
     override val endTimestamp: Long? = impl.endEpochNanos
     override val attributes: Map<String, Any> = impl.attributes.convertToMap()
     override val events: List<SpanEventData> = impl.events.map { SpanEventDataAdapter(it) }
+    override val droppedEventsCount: Int = (impl.totalRecordedEvents - impl.events.size).coerceAtLeast(0)
     override val links: List<SpanLinkData> = impl.links.map { SpanLinkDataAdapter(it) }
     override val resource: Resource = ResourceAdapter(impl.resource)
     override val instrumentationScopeInfo: InstrumentationScopeInfo = impl.instrumentationScopeInfo.toOtelKotlinInstrumentationScopeInfo()
