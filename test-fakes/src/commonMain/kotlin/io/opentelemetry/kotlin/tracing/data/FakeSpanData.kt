@@ -23,5 +23,6 @@ class FakeSpanData(
     override val events: List<SpanEventData> = listOf(FakeSpanEventData()),
     override val droppedEventsCount: Int = 0,
     override val links: List<SpanLinkData> = listOf(FakeSpanLinkData()),
+    override val droppedLinksCount: Int = 0,
     override val hasEnded: Boolean = true,
 ) : SpanData

@@ -19,6 +19,7 @@ class SpanDataImpl(
     override val events: List<SpanEventData>,
     override val droppedEventsCount: Int,
     override val links: List<SpanLinkData>,
+    override val droppedLinksCount: Int,
     override val resource: Resource,
     override val instrumentationScopeInfo: InstrumentationScopeInfo,
     override val hasEnded: Boolean,

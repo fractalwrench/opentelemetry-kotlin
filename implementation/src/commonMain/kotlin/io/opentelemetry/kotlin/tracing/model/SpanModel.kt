@@ -34,7 +34,8 @@ internal class SpanModel(
     override val parent: SpanContext,
     spanContext: SpanContext,
     private val spanLimitConfig: SpanLimitConfig,
-    initialLinks: List<SpanLink>
+    initialLinks: List<SpanLink>,
+    initialDroppedLinksCount: Int = 0
 ) : ReadWriteSpan, SpanCreationAction {
 
     private enum class State {
@@ -122,9 +123,16 @@ internal class SpanModel(
 
     private val linksList = initialLinks.toMutableList<SpanLinkData>()
 
+    private var droppedLinksCountImpl = initialDroppedLinksCount
+
     override val links: List<SpanLinkData>
         get() = lock.read {
             linksList.toList()
+        }
+
+    override val droppedLinksCount: Int
+        get() = lock.read {
+            droppedLinksCountImpl
         }
 
     override fun addLink(
@@ -132,9 +140,13 @@ internal class SpanModel(
         attributes: (AttributesMutator.() -> Unit)?
     ) {
         lock.write {
-            if (isRecording() && linksList.size < spanLimitConfig.linkCountLimit) {
-                val link = buildSpanLink(spanContext, attributes, spanLimitConfig)
-                linksList.add(link)
+            if (isRecording()) {
+                if (linksList.size < spanLimitConfig.linkCountLimit) {
+                    val link = buildSpanLink(spanContext, attributes, spanLimitConfig)
+                    linksList.add(link)
+                } else {
+                    droppedLinksCountImpl++
+                }
             }
         }
     }
@@ -175,6 +187,7 @@ internal class SpanModel(
         events,
         droppedEventsCount,
         links,
+        droppedLinksCount,
         resource,
         instrumentationScopeInfo,
         hasEnded

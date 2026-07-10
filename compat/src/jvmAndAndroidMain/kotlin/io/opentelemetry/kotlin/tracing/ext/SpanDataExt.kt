@@ -29,6 +29,7 @@ internal fun SpanData.toOtelJavaSpanData(): OtelJavaSpanData {
         eventsImpl = events.map { it.toOtelJavaEventData() },
         totalRecordedEventsImpl = events.size + droppedEventsCount,
         linksImpl = links.map { it.toOtelJavaLinkData() },
+        totalRecordedLinksImpl = links.size + droppedLinksCount,
         hasEndedImpl = hasEnded
     )
 }

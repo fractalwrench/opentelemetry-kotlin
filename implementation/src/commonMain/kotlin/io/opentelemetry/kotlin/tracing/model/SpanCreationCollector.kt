@@ -24,8 +24,10 @@ internal class SpanCreationCollector(
     )
 ) : SpanCreationAction, AttributesMutator by attrs {
     private val linksList = mutableListOf<SpanLink>()
+    private var droppedLinksCountImpl = 0
     val attributes: AttributeContainer get() = attrs
     val links: List<SpanLink> get() = linksList.toList()
+    val droppedLinksCount: Int get() = droppedLinksCountImpl
 
     override fun addLink(
         spanContext: SpanContext,
@@ -33,6 +35,8 @@ internal class SpanCreationCollector(
     ) {
         if (linksList.size < spanLimitConfig.linkCountLimit) {
             linksList.add(buildSpanLink(spanContext, attributes, spanLimitConfig))
+        } else {
+            droppedLinksCountImpl++
         }
     }
 }
