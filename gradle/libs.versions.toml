@@ -35,6 +35,7 @@ buildKonfig = "0.22.0"
 composeMultiplatform = "1.11.1"
 androidxActivityCompose = "1.13.0"
 kotest = "6.2.2"
+kotlinpoet = "2.2.0"
 yamlkt = "0.13.0"
 
 [libraries]
@@ -80,6 +81,7 @@ protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref 
 wire-runtime = { module = "com.squareup.wire:wire-runtime", version.ref = "wire" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityCompose" }
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 
 [plugins]
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
