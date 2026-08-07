@@ -25,7 +25,12 @@ public interface Resource : AttributeContainer {
 
     /**
      * Merges this resource with [other], returning a new [Resource].
-     * Properties on [other] take precedence in the event of a conflict when merging.
+     * Attributes on [other] take precedence in the event of a conflict when merging.
+     *
+     * The [schemaUrl] of the merged resource is whichever of the two is non-null, or the shared
+     * value if both are equal. Merging resources whose schema URLs are both non-null and different
+     * is a merging error, which the specification leaves undefined; opentelemetry-kotlin SDK
+     * produces a resource with no [schemaUrl].
      *
      * https://opentelemetry.io/docs/specs/otel/resource/sdk/#merge
      */

@@ -10,7 +10,7 @@ internal class MeterProviderConfigImpl(
 ) : MeterProviderConfigDsl, ResourceConfigDsl by resourceConfigImpl {
 
     fun generateMetricsConfig(base: Resource): MetricsConfig = MetricsConfig(
-        resource = base.merge(resourceConfigImpl.generateResource()),
+        resource = base.merge(resourceConfigImpl.generateResource(sdkErrorHandler)),
         sdkErrorHandler = sdkErrorHandler,
     )
 }

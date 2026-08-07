@@ -17,7 +17,7 @@ import kotlin.test.assertSame
 internal class MeterProviderImplTest {
 
     private val metricsConfig = MetricsConfig(
-        resource = ResourceImpl(AttributesModel(), null),
+        resource = ResourceImpl(AttributesModel(), null, NoopSdkErrorHandler),
         sdkErrorHandler = NoopSdkErrorHandler,
     )
     private lateinit var impl: MeterProviderImpl

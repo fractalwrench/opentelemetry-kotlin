@@ -45,7 +45,7 @@ internal class LoggerProviderConfigImpl(
     ): LoggingConfig = LoggingConfig(
         processor = processor,
         logLimits = generateLogLimitsConfig(globalLimits),
-        resource = base.merge(resourceConfigImpl.generateResource()),
+        resource = base.merge(resourceConfigImpl.generateResource(sdkErrorHandler)),
         sdkErrorHandler = sdkErrorHandler,
         loggerConfigurator = loggerConfigurator,
     )

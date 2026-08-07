@@ -19,7 +19,7 @@ internal class OpenTelemetryConfigImpl(
      * The handler is configured after the sub-configs below have been created, so they receive a
      * forwarder that resolves the configured handler on each report instead.
      */
-    private val sdkErrorHandler = SdkErrorHandler { configuredErrorHandler.onError(it) }
+    internal val sdkErrorHandler = SdkErrorHandler { configuredErrorHandler.onError(it) }
 
     internal val tracingConfig: TracerProviderConfigImpl = TracerProviderConfigImpl(clock, sdkErrorHandler)
     internal val loggingConfig: LoggerProviderConfigImpl = LoggerProviderConfigImpl(clock, sdkErrorHandler)
@@ -64,14 +64,17 @@ internal class OpenTelemetryConfigImpl(
 
     internal fun resolveIdGenerator(): IdGenerator = customIdGenerator?.invoke() ?: IdGeneratorImpl()
 
-    private val defaultResource by lazy(::sdkDefaultResource)
+    private val defaultResource by lazy { sdkDefaultResource(sdkErrorHandler) }
+
+    private fun generateBaseResource() =
+        defaultResource.merge(globalResourceConfig.generateResource(sdkErrorHandler))
 
     internal fun generateTracingConfig() =
-        tracingConfig.generateTracingConfig(defaultResource.merge(globalResourceConfig.generateResource()), globalAttributeLimits)
+        tracingConfig.generateTracingConfig(generateBaseResource(), globalAttributeLimits)
 
     internal fun generateLoggingConfig() =
-        loggingConfig.generateLoggingConfig(defaultResource.merge(globalResourceConfig.generateResource()), globalAttributeLimits)
+        loggingConfig.generateLoggingConfig(generateBaseResource(), globalAttributeLimits)
 
     internal fun generateMetricsConfig() =
-        metricsConfig.generateMetricsConfig(defaultResource.merge(globalResourceConfig.generateResource()))
+        metricsConfig.generateMetricsConfig(generateBaseResource())
 }

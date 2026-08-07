@@ -5,12 +5,13 @@ import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.attributes.NO_ATTRIBUTE_LIMIT
 import io.opentelemetry.kotlin.attributes.setAttributes
+import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.resource.Resource
 import io.opentelemetry.kotlin.resource.ResourceImpl
 import io.opentelemetry.kotlin.semconv.ServiceAttributes
 import io.opentelemetry.kotlin.semconv.TelemetryAttributes
 
-internal fun sdkDefaultResource(): Resource = ResourceImpl(
+internal fun sdkDefaultResource(sdkErrorHandler: SdkErrorHandler): Resource = ResourceImpl(
     container = AttributesModel(
         attributeLimit = NO_ATTRIBUTE_LIMIT,
         attrs = mutableMapOf(
@@ -21,6 +22,7 @@ internal fun sdkDefaultResource(): Resource = ResourceImpl(
         ),
     ),
     schemaUrl = null,
+    sdkErrorHandler = sdkErrorHandler,
 )
 
 internal class ResourceConfigImpl : ResourceConfigDsl {
@@ -49,12 +51,13 @@ internal class ResourceConfigImpl : ResourceConfigDsl {
         }
     }
 
-    internal fun generateResource(): Resource {
+    internal fun generateResource(sdkErrorHandler: SdkErrorHandler): Resource {
         val attrs = resourceAttrs.attributes.toMutableMap()
         serviceNameOverride?.let { attrs[ServiceAttributes.SERVICE_NAME] = it }
         return ResourceImpl(
             schemaUrl = schemaUrl,
-            container = AttributesModel(attributeLimit = NO_ATTRIBUTE_LIMIT, attrs = attrs)
+            container = AttributesModel(attributeLimit = NO_ATTRIBUTE_LIMIT, attrs = attrs),
+            sdkErrorHandler = sdkErrorHandler,
         )
     }
 }

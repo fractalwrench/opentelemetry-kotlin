@@ -12,7 +12,7 @@ import kotlin.test.assertNull
 
 internal class MeterProviderConfigImplTest {
 
-    private val base = sdkDefaultResource()
+    private val base = sdkDefaultResource(NoopSdkErrorHandler)
 
     @Test
     fun testDefaultMetricsConfig() {

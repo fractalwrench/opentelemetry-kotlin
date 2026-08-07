@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalApi::class)
@@ -58,6 +59,36 @@ internal class CreateOpenTelemetryErrorHandlerTest {
 
         // the throwing processor must not surface as an exception to the caller
         assertEquals(OperationResultCode.Failure, tracerCloseable(api).shutdown())
+        assertFalse(handler.hasErrors())
+    }
+
+    @Test
+    fun `merging resources with conflicting schema urls reports an api misuse`() {
+        val handler = FakeSdkErrorHandler()
+        val api = createOpenTelemetry {
+            errorHandler(handler)
+        } as OpenTelemetrySdk
+
+        val merged = api.resource.create(schemaUrl = "https://example.com/base") {}
+            .merge(api.resource.create(schemaUrl = "https://example.com/other") {})
+
+        assertNull(merged.schemaUrl)
+        val error = handler.apiMisuses.single()
+        assertEquals("Resource.merge", error.api)
+        assertEquals(SdkErrorSeverity.WARNING, error.severity)
+    }
+
+    @Test
+    fun `merging resources with matching schema urls reports nothing`() {
+        val handler = FakeSdkErrorHandler()
+        val api = createOpenTelemetry {
+            errorHandler(handler)
+        } as OpenTelemetrySdk
+
+        val merged = api.resource.create(schemaUrl = "https://example.com/schema") {}
+            .merge(api.resource.create(schemaUrl = "https://example.com/schema") {})
+
+        assertEquals("https://example.com/schema", merged.schemaUrl)
         assertFalse(handler.hasErrors())
     }
 

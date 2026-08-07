@@ -51,7 +51,7 @@ internal class TracerProviderConfigImpl(
     fun generateTracingConfig(base: Resource, globalLimits: AttributeLimitsConfigImpl? = null): TracingConfig = TracingConfig(
         processor = processor,
         spanLimits = generateSpanLimitsConfig(globalLimits),
-        resource = base.merge(resourceConfigImpl.generateResource()),
+        resource = base.merge(resourceConfigImpl.generateResource(sdkErrorHandler)),
         sdkErrorHandler = sdkErrorHandler,
         samplerFactory = { spanFactory -> SamplerConfigImpl(spanFactory).samplerAction() },
         tracerConfigurator = tracerConfigurator,

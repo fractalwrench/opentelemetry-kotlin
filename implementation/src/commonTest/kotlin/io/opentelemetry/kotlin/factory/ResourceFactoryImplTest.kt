@@ -1,6 +1,7 @@
 package io.opentelemetry.kotlin.factory
 
 import io.opentelemetry.kotlin.attributes.DEFAULT_ATTRIBUTE_LIMIT
+import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotSame
@@ -9,7 +10,7 @@ import kotlin.test.assertTrue
 
 internal class ResourceFactoryImplTest {
 
-    private val factory = ResourceFactoryImpl()
+    private val factory = ResourceFactoryImpl(NoopSdkErrorHandler)
 
     @Test
     fun testEmptyHasNoAttributes() {
@@ -23,7 +24,7 @@ internal class ResourceFactoryImplTest {
 
     @Test
     fun testEmptyReturnsSameInstance() {
-        assertNotSame(factory.empty, ResourceFactoryImpl().empty)
+        assertNotSame(factory.empty, ResourceFactoryImpl(NoopSdkErrorHandler).empty)
     }
 
     @Test

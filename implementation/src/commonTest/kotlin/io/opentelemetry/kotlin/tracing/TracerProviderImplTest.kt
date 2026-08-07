@@ -27,7 +27,7 @@ internal class TracerProviderImplTest {
     private val tracingConfig = TracingConfig(
         null,
         fakeSpanLimitsConfig,
-        ResourceImpl(AttributesModel(), null),
+        ResourceImpl(AttributesModel(), null, NoopSdkErrorHandler),
         NoopSdkErrorHandler,
     )
 

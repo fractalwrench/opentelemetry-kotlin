@@ -27,7 +27,7 @@ internal class LoggerProviderImplTest {
     private val loggingConfig = LoggingConfig(
         null,
         LogLimitConfig(100, 100),
-        ResourceImpl(AttributesModel(), null),
+        ResourceImpl(AttributesModel(), null, NoopSdkErrorHandler),
         NoopSdkErrorHandler,
         loggerConfigurator,
     )

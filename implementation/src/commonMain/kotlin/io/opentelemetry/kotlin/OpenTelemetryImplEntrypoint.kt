@@ -32,7 +32,7 @@ public fun createOpenTelemetry(
     val cfg = OpenTelemetryConfigImpl(clock).apply(config)
     val idGenerator = cfg.resolveIdGenerator()
 
-    val resourceFactory = ResourceFactoryImpl()
+    val resourceFactory = ResourceFactoryImpl(cfg.sdkErrorHandler)
     val traceFlags = TraceFlagsFactoryImpl()
     val traceState = TraceStateFactoryImpl()
     val spanContext = SpanContextFactoryImpl(idGenerator, traceFlags, traceState)

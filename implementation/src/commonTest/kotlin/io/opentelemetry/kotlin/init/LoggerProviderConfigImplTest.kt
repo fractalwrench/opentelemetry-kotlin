@@ -21,7 +21,7 @@ import kotlin.test.assertSame
 internal class LoggerProviderConfigImplTest {
 
     private val clock = FakeClock()
-    private val base = sdkDefaultResource()
+    private val base = sdkDefaultResource(NoopSdkErrorHandler)
 
     @Test
     fun testDefaultLoggingConfig() {

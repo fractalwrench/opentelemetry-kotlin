@@ -39,7 +39,7 @@ import kotlin.test.assertSame
 internal class TracerProviderConfigImplTest {
 
     private val clock = FakeClock()
-    private val base = sdkDefaultResource()
+    private val base = sdkDefaultResource(NoopSdkErrorHandler)
 
     private val traceFlagsFactory = TraceFlagsFactoryImpl()
     private val traceStateFactory = TraceStateFactoryImpl()
