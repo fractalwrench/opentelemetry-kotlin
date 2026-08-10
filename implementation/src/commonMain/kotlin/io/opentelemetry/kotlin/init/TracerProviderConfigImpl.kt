@@ -10,6 +10,7 @@ import io.opentelemetry.kotlin.resource.Resource
 import io.opentelemetry.kotlin.tracing.TracerConfigImpl
 import io.opentelemetry.kotlin.tracing.TracerConfigurator
 import io.opentelemetry.kotlin.tracing.export.SpanProcessor
+import io.opentelemetry.kotlin.tracing.export.compositeSpanProcessor
 import io.opentelemetry.kotlin.tracing.sampling.Sampler
 import io.opentelemetry.kotlin.tracing.sampling.alwaysOn
 import io.opentelemetry.kotlin.tracing.sampling.parentBased
@@ -37,7 +38,8 @@ internal class TracerProviderConfigImpl(
             platformLog("export() should only be called once.")
             return
         }
-        processor = TraceExportConfigImpl(clock, sdkErrorHandler).action()
+        val dsl = TraceExportConfigImpl(clock, sdkErrorHandler)
+        processor = dsl.compositeSpanProcessor(dsl.action())
     }
 
     override fun sampler(action: SamplerConfigDsl.() -> Sampler) {

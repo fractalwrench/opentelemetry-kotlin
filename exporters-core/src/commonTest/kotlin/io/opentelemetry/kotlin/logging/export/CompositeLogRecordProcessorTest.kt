@@ -3,6 +3,7 @@ package io.opentelemetry.kotlin.logging.export
 import io.opentelemetry.kotlin.FakeInstrumentationScopeInfo
 import io.opentelemetry.kotlin.context.FakeContext
 import io.opentelemetry.kotlin.error.FakeSdkErrorHandler
+import io.opentelemetry.kotlin.error.SdkErrorSeverity
 import io.opentelemetry.kotlin.export.OperationResultCode
 import io.opentelemetry.kotlin.export.OperationResultCode.Failure
 import io.opentelemetry.kotlin.export.OperationResultCode.Success
@@ -219,5 +220,17 @@ internal class CompositeLogRecordProcessorTest {
         val second = FakeLogRecordProcessor(enabledResult = { true })
         val processor = CompositeLogRecordProcessor(listOf(first, second), errorHandler)
         assertTrue(processor.enabled(fakeContext, scopeInfo, null, null))
+    }
+
+    @Test
+    fun testEnabledOneProcessorThrows() {
+        val first = FakeLogRecordProcessor(enabledResult = { throw IllegalStateException("boom") })
+        val second = FakeLogRecordProcessor(enabledResult = { true })
+        val processor = CompositeLogRecordProcessor(listOf(first, second), errorHandler)
+
+        assertTrue(processor.enabled(fakeContext, scopeInfo, null, null))
+
+        assertEquals(1, errorHandler.userCodeErrors.size)
+        assertEquals(SdkErrorSeverity.WARNING, errorHandler.userCodeErrors.single().severity)
     }
 }

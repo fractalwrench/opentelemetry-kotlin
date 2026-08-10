@@ -5,6 +5,7 @@ import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.attributes.DEFAULT_ATTRIBUTE_LIMIT
 import io.opentelemetry.kotlin.clock.FakeClock
 import io.opentelemetry.kotlin.context.Context
+import io.opentelemetry.kotlin.context.FakeContext
 import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
 import io.opentelemetry.kotlin.factory.ContextFactoryImpl
 import io.opentelemetry.kotlin.factory.FakeSpanFactory
@@ -16,11 +17,11 @@ import io.opentelemetry.kotlin.factory.TraceStateFactoryImpl
 import io.opentelemetry.kotlin.sdkDefaultAttributes
 import io.opentelemetry.kotlin.semconv.ServiceAttributes
 import io.opentelemetry.kotlin.semconv.TelemetryAttributes
+import io.opentelemetry.kotlin.tracing.FakeReadWriteSpan
 import io.opentelemetry.kotlin.tracing.NonRecordingSpan
 import io.opentelemetry.kotlin.tracing.SpanKind
 import io.opentelemetry.kotlin.tracing.TraceFlagsImpl
 import io.opentelemetry.kotlin.tracing.export.FakeSpanProcessor
-import io.opentelemetry.kotlin.tracing.export.SpanProcessor
 import io.opentelemetry.kotlin.tracing.export.compositeSpanProcessor
 import io.opentelemetry.kotlin.tracing.sampling.FakeSampler
 import io.opentelemetry.kotlin.tracing.sampling.ParentBasedSampler
@@ -32,9 +33,9 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 internal class TracerProviderConfigImplTest {
 
@@ -170,22 +171,17 @@ internal class TracerProviderConfigImplTest {
 
     @Test
     fun testDoubleExportConfigKeepsFirst() {
-        var first: SpanProcessor? = null
-        var second: SpanProcessor? = null
+        val first = FakeSpanProcessor()
+        val second = FakeSpanProcessor()
         val cfg = TracerProviderConfigImpl(clock, NoopSdkErrorHandler).apply {
-            export {
-                compositeSpanProcessor(FakeSpanProcessor()).apply {
-                    first = this
-                }
-            }
-            export {
-                compositeSpanProcessor(FakeSpanProcessor()).apply {
-                    second = this
-                }
-            }
+            export { first }
+            export { second }
         }.generateTracingConfig(base)
-        assertSame(first, cfg.processor)
-        assertNotSame(second, cfg.processor)
+
+        assertNotNull(cfg.processor).onStart(FakeReadWriteSpan(), FakeContext())
+
+        assertEquals(1, first.startCalls.size)
+        assertTrue(second.startCalls.isEmpty())
     }
 
     @Test

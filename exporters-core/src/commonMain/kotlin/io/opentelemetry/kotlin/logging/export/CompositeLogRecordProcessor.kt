@@ -42,7 +42,17 @@ internal class CompositeLogRecordProcessor(
     ): Boolean {
         // returns true if _any_ of the processors are enabled.
         return lock.read {
-            processors.any { it.enabled(context, instrumentationScopeInfo, severityNumber, eventName) }
+            var enabled = false
+            batchExportOperation(
+                processors,
+                sdkErrorHandler
+            ) {
+                if (it.enabled(context, instrumentationScopeInfo, severityNumber, eventName)) {
+                    enabled = true
+                }
+                OperationResultCode.Success
+            }
+            enabled
         }
     }
 }
