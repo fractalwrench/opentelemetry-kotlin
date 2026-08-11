@@ -8,12 +8,12 @@ import io.opentelemetry.kotlin.aliases.OtelJavaTraceFlags
 import io.opentelemetry.kotlin.aliases.OtelJavaTraceState
 import io.opentelemetry.kotlin.assertions.assertSpanContextsMatch
 import io.opentelemetry.kotlin.clock.FakeClock
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.factory.CompatContextFactory
 import io.opentelemetry.kotlin.factory.CompatSpanContextFactory
 import io.opentelemetry.kotlin.factory.CompatSpanFactory
 import io.opentelemetry.kotlin.factory.CompatTraceFlagsFactory
 import io.opentelemetry.kotlin.factory.CompatTraceStateFactory
-import io.opentelemetry.kotlin.init.CompatSpanLimitsConfig
 import io.opentelemetry.kotlin.tracing.ext.storeInContext
 import io.opentelemetry.kotlin.tracing.model.SpanAdapter
 import io.opentelemetry.kotlin.tracing.model.SpanContextAdapter
@@ -75,7 +75,7 @@ internal class SpanExtTest {
             OtelJavaContext.root(),
             SpanKind.INTERNAL,
             0,
-            CompatSpanLimitsConfig(),
+            SpanLimits(),
         )
         val root = contextFactory.root()
         val ctx = span.storeInContext(root)

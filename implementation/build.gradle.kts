@@ -26,7 +26,7 @@ kotlin {
                 implementation(project(":sdk-common"))
                 implementation(project(":api-ext"))
                 implementation(project(":sdk-api"))
-                implementation(project(":config-envar"))
+                implementation(project(":config"))
                 implementation(project(":model"))
                 implementation(project(":platform-implementations"))
                 implementation(project(":semconv"))

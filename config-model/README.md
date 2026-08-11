@@ -12,4 +12,8 @@ SDK defaults  <  (envars or declarative config file)  <  DSL
 
 Envars are ignored if a declarative config file is present.
 
+This module also holds the resolved counterparts of those models, where every value is non-null
+because the specification defaults have been applied to whatever no mechanism configured. These
+are what the SDKs actually apply.
+
 https://opentelemetry.io/docs/specs/otel/configuration/

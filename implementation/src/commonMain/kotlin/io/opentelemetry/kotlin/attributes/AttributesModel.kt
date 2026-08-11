@@ -1,7 +1,9 @@
 package io.opentelemetry.kotlin.attributes
 
 import io.opentelemetry.kotlin.ThreadSafe
+import io.opentelemetry.kotlin.config.model.DEFAULT_ATTRIBUTE_COUNT_LIMIT
 import io.opentelemetry.kotlin.threadSafeMap
+import io.opentelemetry.kotlin.config.model.DEFAULT_ATTRIBUTE_VALUE_LENGTH_LIMIT as MODEL_ATTRIBUTE_VALUE_LENGTH_LIMIT
 
 @ThreadSafe
 internal class AttributesModel(
@@ -214,6 +216,6 @@ internal class AttributesModel(
     }
 }
 
-internal const val DEFAULT_ATTRIBUTE_LIMIT: Int = 128
-internal const val DEFAULT_ATTRIBUTE_VALUE_LENGTH_LIMIT: Int = Int.MAX_VALUE
+internal const val DEFAULT_ATTRIBUTE_LIMIT: Int = DEFAULT_ATTRIBUTE_COUNT_LIMIT
+internal const val DEFAULT_ATTRIBUTE_VALUE_LENGTH_LIMIT: Int = MODEL_ATTRIBUTE_VALUE_LENGTH_LIMIT
 internal const val NO_ATTRIBUTE_LIMIT: Int = Int.MAX_VALUE

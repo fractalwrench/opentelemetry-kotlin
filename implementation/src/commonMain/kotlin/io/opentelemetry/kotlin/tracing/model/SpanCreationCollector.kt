@@ -3,7 +3,7 @@ package io.opentelemetry.kotlin.tracing.model
 import io.opentelemetry.kotlin.attributes.AttributeContainer
 import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.attributes.AttributesMutator
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.tracing.SpanContext
 import io.opentelemetry.kotlin.tracing.SpanCreationAction
 
@@ -17,7 +17,7 @@ import io.opentelemetry.kotlin.tracing.SpanCreationAction
  * so [isRecording] checks are unnecessary.
  */
 internal class SpanCreationCollector(
-    private val spanLimitConfig: SpanLimitConfig,
+    private val spanLimitConfig: SpanLimits,
     private val attrs: AttributesModel = AttributesModel(
         attributeLimit = spanLimitConfig.attributeCountLimit,
         attributeValueLengthLimit = spanLimitConfig.attributeValueLengthLimit

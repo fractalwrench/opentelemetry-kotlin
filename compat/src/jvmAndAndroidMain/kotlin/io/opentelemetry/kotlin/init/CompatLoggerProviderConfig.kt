@@ -12,6 +12,7 @@ import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.attributes.CompatAttributesModel
 import io.opentelemetry.kotlin.attributes.attrsFromMap
 import io.opentelemetry.kotlin.attributes.setTypedAttributes
+import io.opentelemetry.kotlin.config.dsl.AttributeLimitsConfigModelBuilder
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.logging.LoggerConfigurator
 import io.opentelemetry.kotlin.logging.LoggerProvider
@@ -84,14 +85,10 @@ internal class CompatLoggerProviderConfig(
     fun build(
         clock: Clock,
         baseResource: Resource = ResourceAdapter(OtelJavaResource.builder().build()),
-        globalLimits: CompatAttributeLimitsConfig? = null,
+        globalLimits: AttributeLimitsConfigModelBuilder? = null,
     ): LoggerProvider {
-        if (globalLimits?.attributeCountLimitSet == true) {
-            logLimitsConfig.attributeCountLimit = globalLimits.attributeCountLimit
-        }
-        if (globalLimits?.attributeValueLengthLimitSet == true) {
-            logLimitsConfig.attributeValueLengthLimit = globalLimits.attributeValueLengthLimit
-        }
+        globalLimits?.configuredAttributeCountLimit?.let { logLimitsConfig.attributeCountLimit = it }
+        globalLimits?.configuredAttributeValueLengthLimit?.let { logLimitsConfig.attributeValueLengthLimit = it }
         logLimitsAction?.invoke(logLimitsConfig)
         builder.setLogLimits(logLimitsConfig::build)
         loggerConfigurator?.let(::applyLoggerConfigurator)

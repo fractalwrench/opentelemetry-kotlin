@@ -4,6 +4,7 @@ import io.opentelemetry.kotlin.assertHasSdkDefaultAttributes
 import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.attributes.DEFAULT_ATTRIBUTE_LIMIT
 import io.opentelemetry.kotlin.clock.FakeClock
+import io.opentelemetry.kotlin.config.model.resolve
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
 import io.opentelemetry.kotlin.factory.ContextFactoryImpl
@@ -13,6 +14,7 @@ import io.opentelemetry.kotlin.factory.SpanContextFactoryImpl
 import io.opentelemetry.kotlin.factory.SpanFactoryImpl
 import io.opentelemetry.kotlin.factory.TraceFlagsFactoryImpl
 import io.opentelemetry.kotlin.factory.TraceStateFactoryImpl
+import io.opentelemetry.kotlin.resource.Resource
 import io.opentelemetry.kotlin.sdkDefaultAttributes
 import io.opentelemetry.kotlin.sdkDefaultSchemaUrl
 import io.opentelemetry.kotlin.semconv.ServiceAttributes
@@ -254,6 +256,13 @@ internal class TracerProviderConfigImplTest {
 
     private fun defaultSampler(): Sampler =
         TracerProviderConfigImpl(clock, NoopSdkErrorHandler).generateTracingConfig(base).samplerFactory(FakeSpanFactory())
+
+    /**
+     * These tests exercise the DSL in isolation, so the limits it declared are resolved on their
+     * own rather than against the environment.
+     */
+    private fun TracerProviderConfigImpl.generateTracingConfig(base: Resource) =
+        generateTracingConfig(base, spanLimitsModel().resolve())
 
     private fun contextWithParent(sampled: Boolean, isRemote: Boolean): Context {
         val traceFlags = when {

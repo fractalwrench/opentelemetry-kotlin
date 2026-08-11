@@ -13,6 +13,7 @@ kotlin {
             dependencies {
                 implementation(project(":sdk-api"))
                 api(project(":config-schema"))
+                api(project(":config-model"))
                 implementation(libs.yamlkt)
                 implementation(libs.okio)
             }

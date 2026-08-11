@@ -1,20 +1,29 @@
 package io.opentelemetry.kotlin.config.envar.tracing
 
+import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.config.envar.model.EnvVarName
 import io.opentelemetry.kotlin.config.envar.model.EnvVarName.Companion.envVarName
 import io.opentelemetry.kotlin.config.envar.model.EnvironmentVariable
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
+import io.opentelemetry.kotlin.config.model.SpanLimitsConfigModel
 
-internal class SpanLimitEnvVarConfigProcessorImpl(
+/**
+ * Reads the span limits the environment declares.
+ *
+ * The result is a [SpanLimitsConfigModel] rather than a fully-populated set of limits: a variable
+ * that is unset, negative or unparseable leaves its limit `null`, so a lower-precedence mechanism
+ * can still supply it and the SDK default applies if nothing does.
+ */
+@ExperimentalApi
+class SpanLimitEnvVarConfigProcessorImpl(
     override val envVars: List<EnvVarName>
 ) : SpanLimitEnvVarConfigProcessor() {
     override fun parse(rawValue: String?): Int? = rawValue?.toIntOrNull()?.takeIf { it >= 0 }
 
     override fun process(
         entries: Map<EnvVarName, EnvironmentVariable<Int>>,
-        defaultValue: SpanLimitConfig
-    ): SpanLimitConfig {
-        return SpanLimitConfig(
+        defaultValue: SpanLimitsConfigModel
+    ): SpanLimitsConfigModel {
+        return SpanLimitsConfigModel(
             attributeCountLimit = entries[envVarName("OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT")]?.value
                 ?: defaultValue.attributeCountLimit,
             attributeValueLengthLimit = entries[envVarName("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT")]?.value

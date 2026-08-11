@@ -3,7 +3,6 @@ package io.opentelemetry.kotlin.config.envar
 import io.opentelemetry.kotlin.Clock
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.config.envar.logging.LogLimitEnvVarConfigProcessorImpl
-import io.opentelemetry.kotlin.config.envar.tracing.SpanLimitEnvVarConfigProcessorImpl
 import io.opentelemetry.kotlin.init.OpenTelemetryConfigDsl
 import io.opentelemetry.kotlin.init.OpenTelemetryConfigImpl
 
@@ -31,13 +30,8 @@ internal fun createOpenTelemetryEnvVarConfigProcessorImpl(
     val logLimitProcessor = LogLimitEnvVarConfigProcessorImpl(
         envVars = EnvVarConstants.LogLimits.envVars
     )
-    val spanLimitProcessor = SpanLimitEnvVarConfigProcessorImpl(
-        envVars = EnvVarConstants.SpanLimits.envVars
-    )
     return OpenTelemetryEnvVarConfigProcessorImpl(
         loggingConfig = cfg.generateLoggingConfig(),
         logLimitProcessor = logLimitProcessor,
-        tracingConfig = cfg.generateTracingConfig(),
-        spanLimitProcessor = spanLimitProcessor,
     )
 }

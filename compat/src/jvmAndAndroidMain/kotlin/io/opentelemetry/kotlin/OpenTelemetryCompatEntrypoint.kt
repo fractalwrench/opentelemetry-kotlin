@@ -35,7 +35,7 @@ public fun createCompatOpenTelemetry(
     val resolvedIdGenerator = cfg.resolveIdGenerator()
     val base = cfg.buildGlobalResource()
     return CompatOpenTelemetryImpl(
-        tracerProvider = cfg.tracerProviderConfig.build(clock, resolvedIdGenerator, base, cfg.globalAttributeLimits),
+        tracerProvider = cfg.tracerProviderConfig.build(clock, resolvedIdGenerator, base, cfg.resolveSpanLimits()),
         loggerProvider = cfg.loggerProviderConfig.build(clock, base, cfg.globalAttributeLimits),
         meterProvider = cfg.meterProviderConfig.build(clock, base),
         clock = clock,

@@ -1,8 +1,13 @@
 package io.opentelemetry.kotlin.config.envar
 
+import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.config.envar.model.EnvVarName
 import io.opentelemetry.kotlin.config.envar.model.EnvVarName.Companion.envVarName
 
+/**
+ * https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
+ */
+@ExperimentalApi
 object EnvVarConstants {
     sealed interface EnvVarLimits {
         val envVars: List<EnvVarName>

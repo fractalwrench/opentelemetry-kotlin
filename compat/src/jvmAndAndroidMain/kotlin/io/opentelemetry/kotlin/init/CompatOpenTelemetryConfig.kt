@@ -6,6 +6,13 @@ import io.opentelemetry.kotlin.aliases.OtelJavaResource
 import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.attributes.CompatAttributesModel
 import io.opentelemetry.kotlin.attributes.setTypedAttributes
+import io.opentelemetry.kotlin.config.dsl.AttributeLimitsConfigModelBuilder
+import io.opentelemetry.kotlin.config.envar.getEnvVarValue
+import io.opentelemetry.kotlin.config.model.OpenTelemetryConfigModel
+import io.opentelemetry.kotlin.config.model.SpanLimits
+import io.opentelemetry.kotlin.config.model.TracerProviderConfigModel
+import io.opentelemetry.kotlin.config.model.resolve
+import io.opentelemetry.kotlin.config.resolveOpenTelemetryConfig
 import io.opentelemetry.kotlin.error.GuardedSdkErrorHandler
 import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
 import io.opentelemetry.kotlin.error.SdkErrorHandler
@@ -23,6 +30,7 @@ import kotlin.concurrent.Volatile
 @ExperimentalApi
 internal class CompatOpenTelemetryConfig(
     clock: Clock,
+    private val readEnvVar: (String) -> String? = ::getEnvVarValue,
 ) : OpenTelemetryConfigDsl {
 
     @Volatile private var configuredErrorHandler: SdkErrorHandler = NoopSdkErrorHandler
@@ -31,7 +39,7 @@ internal class CompatOpenTelemetryConfig(
     internal val tracerProviderConfig = CompatTracerProviderConfig(clock, sdkErrorHandler)
     internal val loggerProviderConfig = CompatLoggerProviderConfig(clock, sdkErrorHandler)
     internal val meterProviderConfig = CompatMeterProviderConfig(clock)
-    internal val globalAttributeLimits = CompatAttributeLimitsConfig()
+    internal val globalAttributeLimits = AttributeLimitsConfigModelBuilder()
     internal val propagatorCfg = CompatPropagatorConfigImpl()
 
     private var customIdGenerator: (() -> IdGenerator)? = null
@@ -101,4 +109,24 @@ internal class CompatOpenTelemetryConfig(
     }
 
     internal fun resolveIdGenerator(): IdGenerator = customIdGenerator?.invoke() ?: CompatIdGenerator()
+
+    /**
+     * The configuration every mechanism agreed on, resolved once so that each signal below reads
+     * the same answer.
+     *
+     * The declarative configuration file is not located or read yet, so only the DSL and the
+     * environment contribute today.
+     */
+    private val resolvedConfig by lazy {
+        resolveOpenTelemetryConfig(
+            dsl = OpenTelemetryConfigModel(
+                tracerProvider = TracerProviderConfigModel(
+                    spanLimits = tracerProviderConfig.spanLimitsModel(globalAttributeLimits),
+                ),
+            ),
+            readEnvVar = readEnvVar,
+        )
+    }
+
+    internal fun resolveSpanLimits(): SpanLimits = resolvedConfig.tracerProvider?.spanLimits.resolve()
 }

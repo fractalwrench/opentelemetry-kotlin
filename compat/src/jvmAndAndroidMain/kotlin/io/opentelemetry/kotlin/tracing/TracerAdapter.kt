@@ -3,9 +3,9 @@ package io.opentelemetry.kotlin.tracing
 import io.opentelemetry.kotlin.Clock
 import io.opentelemetry.kotlin.aliases.OtelJavaContext
 import io.opentelemetry.kotlin.aliases.OtelJavaTracer
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.context.toOtelJavaContext
-import io.opentelemetry.kotlin.init.CompatSpanLimitsConfig
 import io.opentelemetry.kotlin.tracing.ext.toOtelJavaSpanKind
 import io.opentelemetry.kotlin.tracing.model.SpanAdapter
 import java.util.concurrent.TimeUnit
@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 internal class TracerAdapter(
     private val tracer: OtelJavaTracer,
     private val clock: Clock,
-    private val spanLimitsConfig: CompatSpanLimitsConfig
+    private val spanLimits: SpanLimits
 ) : Tracer {
 
     override fun enabled(): Boolean = true
@@ -43,7 +43,7 @@ internal class TracerAdapter(
             parentCtx = parentContext?.toOtelJavaContext() ?: OtelJavaContext.current(),
             spanKind = spanKind,
             startTimestamp = start,
-            spanLimitsConfig = spanLimitsConfig,
+            spanLimits = spanLimits,
         ).apply {
             setName(name)
             if (action != null) {

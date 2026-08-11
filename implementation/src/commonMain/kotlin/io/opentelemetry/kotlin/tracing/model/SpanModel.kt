@@ -6,7 +6,7 @@ import io.opentelemetry.kotlin.ReentrantReadWriteLock
 import io.opentelemetry.kotlin.attributes.AnyValue
 import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.attributes.AttributesMutator
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.resource.Resource
 import io.opentelemetry.kotlin.tracing.SpanContext
 import io.opentelemetry.kotlin.tracing.SpanCreationAction
@@ -33,7 +33,7 @@ internal class SpanModel(
     override val resource: Resource,
     override val parent: SpanContext,
     spanContext: SpanContext,
-    private val spanLimitConfig: SpanLimitConfig,
+    private val spanLimitConfig: SpanLimits,
     initialLinks: List<SpanLink>,
     private val initialDroppedAttributesCount: Int = 0,
     initialDroppedLinksCount: Int = 0

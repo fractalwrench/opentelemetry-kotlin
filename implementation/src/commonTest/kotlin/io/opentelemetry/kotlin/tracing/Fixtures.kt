@@ -1,9 +1,9 @@
 package io.opentelemetry.kotlin.tracing
 
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.init.config.LogLimitConfig
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
 
-internal val fakeSpanLimitsConfig = SpanLimitConfig(
+internal val fakeSpanLimitsConfig = SpanLimits(
     attributeCountLimit = 100,
     attributeValueLengthLimit = Int.MAX_VALUE,
     linkCountLimit = 100,

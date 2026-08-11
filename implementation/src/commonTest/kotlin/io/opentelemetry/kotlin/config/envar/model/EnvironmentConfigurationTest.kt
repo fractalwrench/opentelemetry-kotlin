@@ -16,22 +16,12 @@ internal class EnvironmentConfigurationTest {
             export { FakeLogRecordProcessor() }
         }
         val defaultLogLimits = otelConfig.generateLoggingConfig().logLimits
-        val defaultSpanLimits = otelConfig.generateTracingConfig().spanLimits
 
         // when
-        val config = EnvironmentConfiguration(
-            logLimitConfig = defaultLogLimits,
-            spanLimitConfig = defaultSpanLimits,
-        )
+        val config = EnvironmentConfiguration(logLimitConfig = defaultLogLimits)
 
         // then
         assertEquals(Int.MAX_VALUE, config.logLimitConfig.attributeValueLengthLimit)
         assertEquals(128, config.logLimitConfig.attributeCountLimit)
-        assertEquals(Int.MAX_VALUE, config.spanLimitConfig.attributeValueLengthLimit)
-        assertEquals(128, config.spanLimitConfig.attributeCountLimit)
-        assertEquals(128, config.spanLimitConfig.eventCountLimit)
-        assertEquals(128, config.spanLimitConfig.linkCountLimit)
-        assertEquals(128, config.spanLimitConfig.attributeCountPerEventLimit)
-        assertEquals(128, config.spanLimitConfig.attributeCountPerLinkLimit)
     }
 }

@@ -1,45 +1,43 @@
 package io.opentelemetry.kotlin.init
 
 import io.opentelemetry.kotlin.clock.FakeClock
+import io.opentelemetry.kotlin.config.dsl.AttributeLimitsConfigModelBuilder
+import io.opentelemetry.kotlin.config.model.resolve
 import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
-import io.opentelemetry.kotlin.factory.CompatIdGenerator
 import org.junit.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertNull
 
 internal class GlobalAttributeLimitsConfigTest {
 
     private val clock = FakeClock()
-    private val idGenerator = CompatIdGenerator()
 
     @Test
-    fun `CompatAttributeLimitsConfig default state`() {
-        val cfg = CompatAttributeLimitsConfig()
-        assertFalse(cfg.attributeCountLimitSet)
-        assertFalse(cfg.attributeValueLengthLimitSet)
+    fun `AttributeLimitsConfigModelBuilder default state`() {
+        val cfg = AttributeLimitsConfigModelBuilder()
+
+        assertNull(cfg.configuredAttributeCountLimit)
+        assertNull(cfg.configuredAttributeValueLengthLimit)
         assertEquals(DEFAULT_ATTR_LIMIT, cfg.attributeCountLimit)
         assertEquals(DEFAULT_ATTR_VALUE_LENGTH_LIMIT, cfg.attributeValueLengthLimit)
     }
 
     @Test
-    fun `CompatAttributeLimitsConfig sets flags on assignment`() {
-        val cfg = CompatAttributeLimitsConfig()
+    fun `AttributeLimitsConfigModelBuilder records assignment`() {
+        val cfg = AttributeLimitsConfigModelBuilder()
         cfg.attributeCountLimit = 64
         cfg.attributeValueLengthLimit = 256
-        assertTrue(cfg.attributeCountLimitSet)
-        assertTrue(cfg.attributeValueLengthLimitSet)
-        assertEquals(64, cfg.attributeCountLimit)
-        assertEquals(256, cfg.attributeValueLengthLimit)
+
+        assertEquals(64, cfg.configuredAttributeCountLimit)
+        assertEquals(256, cfg.configuredAttributeValueLengthLimit)
     }
 
     @Test
     fun `global only - applies to spans and logs`() {
-        val globalLimits = CompatAttributeLimitsConfig().apply { attributeCountLimit = 64 }
+        val globalLimits = globalLimits { attributeCountLimit = 64 }
 
         val tracerConfig = CompatTracerProviderConfig(clock, NoopSdkErrorHandler)
-        tracerConfig.build(clock, idGenerator, globalLimits = globalLimits)
-        assertEquals(64, tracerConfig.spanLimitsConfig.attributeCountLimit)
+        assertEquals(64, tracerConfig.spanLimitsModel(globalLimits).resolve().attributeCountLimit)
 
         val loggerConfig = CompatLoggerProviderConfig(clock, NoopSdkErrorHandler)
         loggerConfig.build(clock, globalLimits = globalLimits)
@@ -48,13 +46,12 @@ internal class GlobalAttributeLimitsConfigTest {
 
     @Test
     fun `signal-specific overrides global`() {
-        val globalLimits = CompatAttributeLimitsConfig().apply { attributeCountLimit = 64 }
+        val globalLimits = globalLimits { attributeCountLimit = 64 }
 
         val tracerConfig = CompatTracerProviderConfig(clock, NoopSdkErrorHandler).apply {
             spanLimits { attributeCountLimit = 32 }
         }
-        tracerConfig.build(clock, idGenerator, globalLimits = globalLimits)
-        assertEquals(32, tracerConfig.spanLimitsConfig.attributeCountLimit)
+        assertEquals(32, tracerConfig.spanLimitsModel(globalLimits).resolve().attributeCountLimit)
 
         val loggerConfig = CompatLoggerProviderConfig(clock, NoopSdkErrorHandler)
         loggerConfig.build(clock, globalLimits = globalLimits)
@@ -63,26 +60,33 @@ internal class GlobalAttributeLimitsConfigTest {
 
     @Test
     fun `partial signal override - other global properties still apply`() {
-        val globalLimits = CompatAttributeLimitsConfig().apply { attributeCountLimit = 64 }
+        val globalLimits = globalLimits { attributeCountLimit = 64 }
 
         val tracerConfig = CompatTracerProviderConfig(clock, NoopSdkErrorHandler).apply {
             spanLimits { attributeValueLengthLimit = 256 }
         }
-        tracerConfig.build(clock, idGenerator, globalLimits = globalLimits)
-        assertEquals(64, tracerConfig.spanLimitsConfig.attributeCountLimit)
-        assertEquals(256, tracerConfig.spanLimitsConfig.attributeValueLengthLimit)
+
+        with(tracerConfig.spanLimitsModel(globalLimits).resolve()) {
+            assertEquals(64, attributeCountLimit)
+            assertEquals(256, attributeValueLengthLimit)
+        }
     }
 
     @Test
-    fun `no global - defaults are zero (Java SDK uses its own defaults)`() {
+    fun `no global - specification defaults apply`() {
         val tracerConfig = CompatTracerProviderConfig(clock, NoopSdkErrorHandler)
-        tracerConfig.build(clock, idGenerator)
-        assertEquals(DEFAULT_ATTR_LIMIT, tracerConfig.spanLimitsConfig.attributeCountLimit)
-        assertEquals(DEFAULT_ATTR_VALUE_LENGTH_LIMIT, tracerConfig.spanLimitsConfig.attributeValueLengthLimit)
+
+        with(tracerConfig.spanLimitsModel().resolve()) {
+            assertEquals(DEFAULT_ATTR_LIMIT, attributeCountLimit)
+            assertEquals(DEFAULT_ATTR_VALUE_LENGTH_LIMIT, attributeValueLengthLimit)
+        }
 
         val loggerConfig = CompatLoggerProviderConfig(clock, NoopSdkErrorHandler)
         loggerConfig.build(clock)
         assertEquals(DEFAULT_ATTR_LIMIT, loggerConfig.logLimitsConfig.attributeCountLimit)
         assertEquals(DEFAULT_ATTR_VALUE_LENGTH_LIMIT, loggerConfig.logLimitsConfig.attributeValueLengthLimit)
     }
+
+    private fun globalLimits(action: AttributeLimitsConfigModelBuilder.() -> Unit) =
+        AttributeLimitsConfigModelBuilder().apply(action)
 }

@@ -2,13 +2,13 @@ package io.opentelemetry.kotlin.tracing
 
 import io.opentelemetry.kotlin.InstrumentationScopeInfoImpl
 import io.opentelemetry.kotlin.clock.FakeClock
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.export.MutableShutdownState
 import io.opentelemetry.kotlin.factory.FakeContextFactory
 import io.opentelemetry.kotlin.factory.FakeIdGenerator
 import io.opentelemetry.kotlin.factory.FakeSpanContextFactory
 import io.opentelemetry.kotlin.factory.FakeTraceFlagsFactory
 import io.opentelemetry.kotlin.factory.hexToByteArray
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
 import io.opentelemetry.kotlin.resource.FakeResource
 import io.opentelemetry.kotlin.tracing.data.SpanLinkData
 import io.opentelemetry.kotlin.tracing.export.FakeSpanProcessor
@@ -26,20 +26,13 @@ internal class SpanLinkTest {
     private lateinit var tracer: TracerImpl
     private lateinit var clock: FakeClock
     private lateinit var processor: FakeSpanProcessor
-    private lateinit var spanLimitConfig: SpanLimitConfig
+    private lateinit var spanLimitConfig: SpanLimits
 
     @BeforeTest
     fun setUp() {
         clock = FakeClock()
         processor = FakeSpanProcessor()
-        spanLimitConfig = SpanLimitConfig(
-            attributeCountLimit = fakeSpanLimitsConfig.attributeCountLimit,
-            attributeValueLengthLimit = fakeSpanLimitsConfig.attributeValueLengthLimit,
-            linkCountLimit = linkLimit,
-            eventCountLimit = fakeSpanLimitsConfig.eventCountLimit,
-            attributeCountPerEventLimit = fakeSpanLimitsConfig.attributeCountPerEventLimit,
-            attributeCountPerLinkLimit = fakeSpanLimitsConfig.attributeCountPerLinkLimit
-        )
+        spanLimitConfig = fakeSpanLimitsConfig.copy(linkCountLimit = linkLimit)
         tracer = TracerImpl(
             clock = clock,
             processor = processor,

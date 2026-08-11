@@ -13,6 +13,10 @@ import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.attributes.CompatAttributesModel
 import io.opentelemetry.kotlin.attributes.attrsFromMap
 import io.opentelemetry.kotlin.attributes.setTypedAttributes
+import io.opentelemetry.kotlin.config.dsl.AttributeLimitsConfigModelBuilder
+import io.opentelemetry.kotlin.config.dsl.buildSpanLimitsModel
+import io.opentelemetry.kotlin.config.model.SpanLimits
+import io.opentelemetry.kotlin.config.model.SpanLimitsConfigModel
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.factory.CompatSpanContextFactory
 import io.opentelemetry.kotlin.factory.CompatSpanFactory
@@ -38,7 +42,6 @@ internal class CompatTracerProviderConfig(
 ) : TracerProviderConfigDsl {
 
     private val builder: OtelJavaSdkTracerProviderBuilder = OtelJavaSdkTracerProvider.builder()
-    internal val spanLimitsConfig = CompatSpanLimitsConfig()
     private var spanLimitsAction: (SpanLimitsConfigDsl.() -> Unit)? = null
     private var tracerConfigurator: TracerConfigurator? = null
     private var serviceNameOverride: String? = null
@@ -98,11 +101,21 @@ internal class CompatTracerProviderConfig(
         OtelJavaSdkTracerProviderUtil.setTracerConfigurator(builder, scopeConfigurator)
     }
 
+    /**
+     * The span limits the DSL declared, as one layer for the config resolver. Limits the DSL did
+     * not mention are left unset so that a lower-precedence mechanism can supply them.
+     */
+    fun spanLimitsModel(globalLimits: AttributeLimitsConfigModelBuilder? = null): SpanLimitsConfigModel? =
+        buildSpanLimitsModel(globalLimits, spanLimitsAction)
+
+    /**
+     * @param spanLimits the limits resolved from every configuration mechanism, not just the DSL.
+     */
     fun build(
         clock: Clock,
         idGenerator: IdGenerator,
         baseResource: Resource = ResourceAdapter(OtelJavaResource.builder().build()),
-        globalLimits: CompatAttributeLimitsConfig? = null,
+        spanLimits: SpanLimits = SpanLimits(),
     ): TracerProvider {
         builder.setIdGenerator(
             when (idGenerator) {
@@ -110,14 +123,7 @@ internal class CompatTracerProviderConfig(
                 else -> OtelJavaIdGeneratorAdapter(idGenerator)
             }
         )
-        if (globalLimits?.attributeCountLimitSet == true) {
-            spanLimitsConfig.attributeCountLimit = globalLimits.attributeCountLimit
-        }
-        if (globalLimits?.attributeValueLengthLimitSet == true) {
-            spanLimitsConfig.attributeValueLengthLimit = globalLimits.attributeValueLengthLimit
-        }
-        spanLimitsAction?.invoke(spanLimitsConfig)
-        builder.setSpanLimits(spanLimitsConfig.build())
+        builder.setSpanLimits(spanLimits.toOtelJavaSpanLimits())
         tracerConfigurator?.let(::applyTracerConfigurator)
         val resource = ResourceAdapter(
             OtelJavaResource.create(resourceAttrs.otelJavaAttributes(), resourceSchemaUrl)
@@ -128,7 +134,7 @@ internal class CompatTracerProviderConfig(
             builder.setResource(OtelJavaResource.create(attrs, merged.schemaUrl))
         }
         builder.setClock(OtelJavaClockWrapper(clock))
-        return TracerProviderAdapter(builder.build(), clock, spanLimitsConfig)
+        return TracerProviderAdapter(builder.build(), clock, spanLimits)
     }
 
     private class TraceExportConfigCompat(

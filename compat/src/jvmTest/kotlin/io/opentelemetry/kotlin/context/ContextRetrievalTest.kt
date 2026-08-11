@@ -9,8 +9,8 @@ import io.opentelemetry.kotlin.aliases.OtelJavaSpan
 import io.opentelemetry.kotlin.aliases.OtelJavaSpanContext
 import io.opentelemetry.kotlin.aliases.OtelJavaStatusCode
 import io.opentelemetry.kotlin.clock.FakeClock
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.factory.CompatContextFactory
-import io.opentelemetry.kotlin.init.CompatSpanLimitsConfig
 import io.opentelemetry.kotlin.tracing.SpanKind
 import io.opentelemetry.kotlin.tracing.model.OtelJavaSpanAdapter
 import io.opentelemetry.kotlin.tracing.model.SpanAdapter
@@ -62,7 +62,7 @@ internal class ContextRetrievalTest {
     @Test
     fun `store and retrieve implicit span from context`() {
         val impl = FakeSpanImpl()
-        val kotlinSpan = SpanAdapter(impl, FakeClock(), null, SpanKind.INTERNAL, 0, CompatSpanLimitsConfig())
+        val kotlinSpan = SpanAdapter(impl, FakeClock(), null, SpanKind.INTERNAL, 0, SpanLimits())
         val javaSpan = OtelJavaSpanAdapter(kotlinSpan)
 
         val ctx = javaDecorator.with(javaSpan)

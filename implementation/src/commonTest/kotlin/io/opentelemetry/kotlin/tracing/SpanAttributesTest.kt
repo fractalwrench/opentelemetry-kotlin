@@ -3,12 +3,12 @@ package io.opentelemetry.kotlin.tracing
 import io.opentelemetry.kotlin.InstrumentationScopeInfoImpl
 import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.clock.FakeClock
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.export.MutableShutdownState
 import io.opentelemetry.kotlin.factory.FakeContextFactory
 import io.opentelemetry.kotlin.factory.FakeIdGenerator
 import io.opentelemetry.kotlin.factory.FakeSpanContextFactory
 import io.opentelemetry.kotlin.factory.FakeTraceFlagsFactory
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
 import io.opentelemetry.kotlin.resource.FakeResource
 import io.opentelemetry.kotlin.tracing.export.FakeSpanProcessor
 import kotlin.test.BeforeTest
@@ -31,18 +31,14 @@ internal class SpanAttributesTest {
     )
 
     private val key = InstrumentationScopeInfoImpl("key", null, null, emptyMap())
-    private lateinit var spanLimitConfig: SpanLimitConfig
+    private lateinit var spanLimitConfig: SpanLimits
     private lateinit var tracer: TracerImpl
 
     @BeforeTest
     fun setUp() {
-        spanLimitConfig = SpanLimitConfig(
+        spanLimitConfig = fakeSpanLimitsConfig.copy(
             attributeCountLimit = attributeLimit,
             attributeValueLengthLimit = Int.MAX_VALUE,
-            linkCountLimit = fakeSpanLimitsConfig.linkCountLimit,
-            eventCountLimit = fakeSpanLimitsConfig.eventCountLimit,
-            attributeCountPerEventLimit = fakeSpanLimitsConfig.attributeCountPerEventLimit,
-            attributeCountPerLinkLimit = fakeSpanLimitsConfig.attributeCountPerLinkLimit
         )
         tracer = TracerImpl(
             clock = FakeClock(),
@@ -205,13 +201,9 @@ internal class SpanAttributesTest {
     }
 
     private fun tracerWithValueLengthLimit(limit: Int): TracerImpl {
-        val config = SpanLimitConfig(
+        val config = fakeSpanLimitsConfig.copy(
             attributeCountLimit = attributeLimit,
             attributeValueLengthLimit = limit,
-            linkCountLimit = fakeSpanLimitsConfig.linkCountLimit,
-            eventCountLimit = fakeSpanLimitsConfig.eventCountLimit,
-            attributeCountPerEventLimit = fakeSpanLimitsConfig.attributeCountPerEventLimit,
-            attributeCountPerLinkLimit = fakeSpanLimitsConfig.attributeCountPerLinkLimit
         )
         return TracerImpl(
             clock = FakeClock(),

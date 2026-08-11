@@ -1,9 +1,12 @@
 package io.opentelemetry.kotlin.init
 
 import io.opentelemetry.kotlin.Clock
+import io.opentelemetry.kotlin.config.dsl.AttributeLimitsConfigModelBuilder
+import io.opentelemetry.kotlin.config.dsl.buildSpanLimitsModel
+import io.opentelemetry.kotlin.config.model.SpanLimits
+import io.opentelemetry.kotlin.config.model.SpanLimitsConfigModel
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.factory.SpanFactory
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
 import io.opentelemetry.kotlin.init.config.TracingConfig
 import io.opentelemetry.kotlin.platformLog
 import io.opentelemetry.kotlin.resource.Resource
@@ -48,9 +51,19 @@ internal class TracerProviderConfigImpl(
         tracerConfigurator = configurator
     }
 
-    fun generateTracingConfig(base: Resource, globalLimits: AttributeLimitsConfigImpl? = null): TracingConfig = TracingConfig(
+    /**
+     * The span limits the DSL declared, as one layer for the config resolver. Limits the DSL did
+     * not mention are left unset so that a lower-precedence mechanism can supply them.
+     */
+    fun spanLimitsModel(globalLimits: AttributeLimitsConfigModelBuilder? = null): SpanLimitsConfigModel? =
+        buildSpanLimitsModel(globalLimits, spanLimitsAction)
+
+    /**
+     * @param spanLimits the limits resolved from every configuration mechanism, not just the DSL.
+     */
+    fun generateTracingConfig(base: Resource, spanLimits: SpanLimits): TracingConfig = TracingConfig(
         processor = processor,
-        spanLimits = generateSpanLimitsConfig(globalLimits),
+        spanLimits = spanLimits,
         resource = base.merge(resourceConfigImpl.generateResource()),
         sdkErrorHandler = sdkErrorHandler,
         samplerFactory = { spanFactory -> SamplerConfigImpl(spanFactory).samplerAction() },
@@ -58,21 +71,4 @@ internal class TracerProviderConfigImpl(
     )
 
     private class SamplerConfigImpl(override val spanFactory: SpanFactory) : SamplerConfigDsl
-
-    private fun generateSpanLimitsConfig(globalLimits: AttributeLimitsConfigImpl?): SpanLimitConfig {
-        val impl = SpanLimitsConfigImpl()
-        globalLimits?.let {
-            impl.attributeCountLimit = it.attributeCountLimit
-            impl.attributeValueLengthLimit = it.attributeValueLengthLimit
-        }
-        spanLimitsAction(impl)
-        return SpanLimitConfig(
-            attributeCountLimit = impl.attributeCountLimit,
-            attributeValueLengthLimit = impl.attributeValueLengthLimit,
-            linkCountLimit = impl.linkCountLimit,
-            eventCountLimit = impl.eventCountLimit,
-            attributeCountPerEventLimit = impl.attributeCountPerEventLimit,
-            attributeCountPerLinkLimit = impl.attributeCountPerLinkLimit,
-        )
-    }
 }

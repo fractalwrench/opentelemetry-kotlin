@@ -1,6 +1,7 @@
 package io.opentelemetry.kotlin.init.config
 
 import io.opentelemetry.kotlin.ThreadSafe
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.factory.SpanFactory
 import io.opentelemetry.kotlin.resource.Resource
@@ -26,7 +27,7 @@ internal class TracingConfig(
     /**
      * Limits on span data capture.
      */
-    val spanLimits: SpanLimitConfig,
+    val spanLimits: SpanLimits,
 
     /**
      * A resource to append to spans.

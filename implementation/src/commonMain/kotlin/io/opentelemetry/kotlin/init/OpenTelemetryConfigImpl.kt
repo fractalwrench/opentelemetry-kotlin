@@ -1,6 +1,12 @@
 package io.opentelemetry.kotlin.init
 
 import io.opentelemetry.kotlin.Clock
+import io.opentelemetry.kotlin.config.dsl.AttributeLimitsConfigModelBuilder
+import io.opentelemetry.kotlin.config.envar.getEnvVarValue
+import io.opentelemetry.kotlin.config.model.OpenTelemetryConfigModel
+import io.opentelemetry.kotlin.config.model.TracerProviderConfigModel
+import io.opentelemetry.kotlin.config.model.resolve
+import io.opentelemetry.kotlin.config.resolveOpenTelemetryConfig
 import io.opentelemetry.kotlin.error.GuardedSdkErrorHandler
 import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
 import io.opentelemetry.kotlin.error.SdkErrorHandler
@@ -16,6 +22,7 @@ internal class OpenTelemetryConfigImpl(
     clock: Clock,
     private val resourceFactory: ResourceFactory = ResourceFactoryImpl(),
     private val globalResourceConfig: ResourceConfigImpl = ResourceConfigImpl(),
+    private val readEnvVar: (String) -> String? = ::getEnvVarValue,
 ) : OpenTelemetryConfigDsl, ResourceConfigDsl by globalResourceConfig {
 
     @Volatile private var configuredErrorHandler: SdkErrorHandler = NoopSdkErrorHandler
@@ -31,7 +38,7 @@ internal class OpenTelemetryConfigImpl(
     internal val metricsConfig: MeterProviderConfigImpl = MeterProviderConfigImpl(sdkErrorHandler)
     internal val contextConfig: ContextConfigImpl = ContextConfigImpl()
     internal val propagatorCfg: PropagatorConfigImpl = PropagatorConfigImpl()
-    private val globalAttributeLimits = AttributeLimitsConfigImpl()
+    private val globalAttributeLimits = AttributeLimitsConfigModelBuilder()
     private val resourceDetectionConfig = ResourceDetectionConfigImpl()
 
     private var customIdGenerator: (() -> IdGenerator)? = null
@@ -80,8 +87,28 @@ internal class OpenTelemetryConfigImpl(
             .merge(globalResourceConfig.generateResource())
     }
 
-    internal fun generateTracingConfig() =
-        tracingConfig.generateTracingConfig(baseResource, globalAttributeLimits)
+    /**
+     * The configuration every mechanism agreed on, resolved once so that each signal below reads
+     * the same answer.
+     *
+     * The declarative configuration file is not located or read yet, so only the DSL and the
+     * environment contribute today.
+     */
+    private val resolvedConfig by lazy {
+        resolveOpenTelemetryConfig(
+            dsl = OpenTelemetryConfigModel(
+                tracerProvider = TracerProviderConfigModel(
+                    spanLimits = tracingConfig.spanLimitsModel(globalAttributeLimits),
+                ),
+            ),
+            readEnvVar = readEnvVar,
+        )
+    }
+
+    internal fun generateTracingConfig() = tracingConfig.generateTracingConfig(
+        base = baseResource,
+        spanLimits = resolvedConfig.tracerProvider?.spanLimits.resolve(),
+    )
 
     internal fun generateLoggingConfig() =
         loggingConfig.generateLoggingConfig(baseResource, globalAttributeLimits)

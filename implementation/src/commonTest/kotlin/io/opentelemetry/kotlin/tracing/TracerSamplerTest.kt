@@ -2,6 +2,7 @@ package io.opentelemetry.kotlin.tracing
 
 import io.opentelemetry.kotlin.InstrumentationScopeInfoImpl
 import io.opentelemetry.kotlin.clock.FakeClock
+import io.opentelemetry.kotlin.config.model.SpanLimits
 import io.opentelemetry.kotlin.export.MutableShutdownState
 import io.opentelemetry.kotlin.factory.ContextFactory
 import io.opentelemetry.kotlin.factory.ContextFactoryImpl
@@ -13,7 +14,6 @@ import io.opentelemetry.kotlin.factory.SpanFactory
 import io.opentelemetry.kotlin.factory.SpanFactoryImpl
 import io.opentelemetry.kotlin.factory.TraceFlagsFactoryImpl
 import io.opentelemetry.kotlin.factory.TraceStateFactoryImpl
-import io.opentelemetry.kotlin.init.config.SpanLimitConfig
 import io.opentelemetry.kotlin.resource.FakeResource
 import io.opentelemetry.kotlin.tracing.export.FakeSpanProcessor
 import io.opentelemetry.kotlin.tracing.sampling.AlwaysOnSampler
@@ -51,7 +51,7 @@ internal class TracerSamplerTest {
 
     private fun buildTracer(
         sampler: Sampler = AlwaysOnSampler(),
-        limitsCfg: SpanLimitConfig = fakeSpanLimitsConfig
+        limitsCfg: SpanLimits = fakeSpanLimitsConfig
     ) = TracerImpl(
         clock = clock,
         processor = processor,
@@ -139,15 +139,7 @@ internal class TracerSamplerTest {
 
     @Test
     fun testSamplerAttrsRespectLimits() {
-        val cfg = fakeSpanLimitsConfig
-        val limitedConfig = SpanLimitConfig(
-            attributeCountLimit = 2,
-            attributeValueLengthLimit = cfg.attributeValueLengthLimit,
-            linkCountLimit = cfg.linkCountLimit,
-            eventCountLimit = cfg.eventCountLimit,
-            attributeCountPerEventLimit = cfg.attributeCountPerEventLimit,
-            attributeCountPerLinkLimit = cfg.attributeCountPerLinkLimit,
-        )
+        val limitedConfig = fakeSpanLimitsConfig.copy(attributeCountLimit = 2)
         val sampler = FakeSampler(
             samplerAttributes = mapOf(
                 "key1" to "value1",
@@ -204,14 +196,7 @@ internal class TracerSamplerTest {
     fun testSamplerReceiverCappedLinks() {
         val sampler = FakeSampler()
 
-        val cfg = SpanLimitConfig(
-            attributeCountLimit = fakeSpanLimitsConfig.attributeCountLimit,
-            attributeValueLengthLimit = fakeSpanLimitsConfig.attributeValueLengthLimit,
-            linkCountLimit = 1,
-            eventCountLimit = fakeSpanLimitsConfig.eventCountLimit,
-            attributeCountPerEventLimit = fakeSpanLimitsConfig.attributeCountPerEventLimit,
-            attributeCountPerLinkLimit = fakeSpanLimitsConfig.attributeCountPerLinkLimit,
-        )
+        val cfg = fakeSpanLimitsConfig.copy(linkCountLimit = 1)
 
         val tracer = buildTracer(sampler, cfg)
         val ctxA = FakeSpanContext.INVALID
