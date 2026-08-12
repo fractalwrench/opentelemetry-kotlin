@@ -40,5 +40,41 @@ internal class AttributesMutatorExtTest {
         assertEquals(anyValue, mutator.attributes["anyvalue"])
     }
 
+    @Test
+    fun `can set collections containing null elements`() {
+        val mutator = FakeAttributesMutator()
+        mutator.setAttributes(
+            mapOf(
+                Pair("strings", listOf("foo", null)),
+                Pair("single null", listOf(null)),
+                Pair("all null", listOf(null, null)),
+                Pair("longs", listOf(1L, null)),
+                Pair("array", arrayOf(null, "a")),
+                Pair("set", setOf("a", null))
+            )
+        )
+
+        assertEquals(listOf("foo", "null"), mutator.attributes["strings"])
+        assertEquals(listOf("null"), mutator.attributes["single null"])
+        assertEquals(listOf("null", "null"), mutator.attributes["all null"])
+        assertEquals(listOf("1", "null"), mutator.attributes["longs"])
+        assertEquals(listOf("null", "a"), mutator.attributes["array"])
+        assertEquals(listOf("a", "null"), mutator.attributes["set"])
+    }
+
+    @Test
+    fun `can set mixed and empty collections`() {
+        val mutator = FakeAttributesMutator()
+        mutator.setAttributes(
+            mapOf(
+                Pair("mixed", listOf("a", 1)),
+                Pair("empty", emptyList<String>())
+            )
+        )
+
+        assertEquals(listOf("a", "1"), mutator.attributes["mixed"])
+        assertEquals(emptyList<String>(), mutator.attributes["empty"])
+    }
+
     data class TestObj(val first: String, val second: Long)
 }

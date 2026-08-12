@@ -44,7 +44,8 @@ private fun AttributesMutator.handleCollection(key: String, input: List<*>) {
             key,
             input.filterIsInstance<Number>()
         )
-        else -> handleCollection(key, input.map { it?.toString() })
+        // stringify nulls, if any
+        else -> setStringListAttribute(key, input.map { it.toString() })
     }
 }
 
