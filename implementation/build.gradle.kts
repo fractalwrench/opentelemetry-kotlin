@@ -33,6 +33,7 @@ kotlin {
                 implementation(project(":exporters-core"))
                 implementation(project(":noop"))
                 implementation(project(":propagators"))
+                implementation(project(":context-impl"))
                 implementation(project(":semconv"))
                 implementation(libs.kotlinx.coroutines)
             }

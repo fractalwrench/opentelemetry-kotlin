@@ -52,6 +52,21 @@ public interface OpenTelemetryConfigDsl : ResourceConfigDsl, ConfigFileDsl {
     public fun propagator(action: PropagatorConfigDsl.() -> TextMapPropagator)
 
     /**
+     * Whether the propagators that instrumentation obtains directly from
+     * [io.opentelemetry.kotlin.propagation.Propagators] are active. Defaults to `true`, matching
+     * opentelemetry-java, where a propagator works regardless of whether an SDK is installed.
+     *
+     * Set this to `false` if the application must be able to guarantee that no context leaves the
+     * process — for example where baggage could carry data the user has not consented to sharing.
+     * It has no effect on the propagator configured via [propagator], which always propagates.
+     *
+     * This switch is process-wide rather than scoped to this instance, because the propagators it
+     * governs are obtained without an [io.opentelemetry.kotlin.OpenTelemetry] instance. The last
+     * SDK to set it wins.
+     */
+    public var instrumentationPropagation: Boolean
+
+    /**
      * Configures a custom [IdGenerator] that is used to generate trace and span IDs. If this is
      * not set the SDK will provide its own default implementation.
      * https://opentelemetry.io/docs/specs/otel/trace/sdk/#id-generators

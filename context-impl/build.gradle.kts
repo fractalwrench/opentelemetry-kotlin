@@ -11,8 +11,15 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                api(project(":api"))
+                // ImplicitContextStorage and SdkErrorHandler appear in public signatures here
                 api(project(":sdk-api"))
-                implementation(project(":context-impl"))
+                implementation(project(":sdk-common"))
+            }
+        }
+        val commonTest by getting {
+            dependencies {
+                implementation(project(":test-fakes"))
             }
         }
     }

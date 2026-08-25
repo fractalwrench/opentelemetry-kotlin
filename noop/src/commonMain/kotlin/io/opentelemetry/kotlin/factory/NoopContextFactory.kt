@@ -1,15 +1,9 @@
 package io.opentelemetry.kotlin.factory
 
-import io.opentelemetry.kotlin.context.Context
-import io.opentelemetry.kotlin.context.ContextKey
-import io.opentelemetry.kotlin.context.NoopContext
-import io.opentelemetry.kotlin.context.NoopContextKey
-
-internal object NoopContextFactory : ContextFactory {
-
-    override fun root(): Context = NoopContext
-
-    override fun implicit(): Context = NoopContext
-
-    override fun <T> createKey(name: String): ContextKey<T> = NoopContextKey(name)
-}
+/**
+ * Context is an API-level concern that stays functional when no SDK is installed, matching
+ * opentelemetry-java, so that instrumentation propagating context doesn't silently drop it. Only
+ * the telemetry a Context carries is noop: [NoopSpanFactory] means spans stored here are never
+ * recorded.
+ */
+internal val NoopContextFactory: ContextFactory = ContextFactoryImpl(NoopSpanFactory)

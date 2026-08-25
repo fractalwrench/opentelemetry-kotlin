@@ -1,10 +1,7 @@
 package io.opentelemetry.kotlin
 
-import io.opentelemetry.kotlin.baggage.NoopBaggage
 import io.opentelemetry.kotlin.config.NoopConfigProperties
 import io.opentelemetry.kotlin.config.NoopConfigProvider
-import io.opentelemetry.kotlin.context.NoopContext
-import io.opentelemetry.kotlin.context.NoopContextKey
 import io.opentelemetry.kotlin.factory.NoopBaggageFactory
 import io.opentelemetry.kotlin.logging.SeverityNumber
 import io.opentelemetry.kotlin.propagation.NoopTextMapPropagator
@@ -18,6 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -136,15 +134,16 @@ internal class NoopTests {
     fun testNoopExplicitContext() {
         val otel = NoopOpenTelemetry
 
+        // Context is an API-level concern that keeps working without an SDK, so that
+        // instrumentation propagating context doesn't silently drop it.
         val key = otel.context.createKey<String>("key")
-        assertTrue(key is NoopContextKey)
-
         val ctx = otel.context.root()
 
         val other = ctx.set(key, "value")
-        assertSame(ctx, other)
+        assertNotSame(ctx, other)
 
         assertNull(ctx.get(key))
+        assertEquals("value", other.get(key))
     }
 
     @Test
@@ -181,7 +180,21 @@ internal class NoopTests {
         val otel = NoopOpenTelemetry
         val span = otel.tracerProvider.getTracer("tracer").startSpan("span")
         val ctx = otel.context.root().storeSpan(span)
-        assertTrue(ctx is NoopContext)
+
+        // The context is real, but the span it carries is still a noop
+        assertSame(span, ctx.extractSpan())
+        assertTrue(ctx.extractSpan() is NoopSpan)
+    }
+
+    @Test
+    fun testStoreBaggage() {
+        val otel = NoopOpenTelemetry
+        val baggage = otel.baggage.create { put("k", "v") }
+        val ctx = otel.context.root().storeBaggage(baggage)
+
+        assertEquals("v", ctx.extractBaggage().getValue("k"))
+        assertNull(otel.context.root().extractBaggage().getValue("k"))
+        assertNull(ctx.clearBaggage().extractBaggage().getValue("k"))
     }
 
     @Test
@@ -257,14 +270,15 @@ internal class NoopTests {
 
     @Test
     fun testNoopBaggageFactory() {
-        assertSame(NoopBaggage, NoopBaggageFactory.empty())
-        assertSame(NoopBaggage, NoopBaggageFactory.create { })
+        // Baggage is an API-level concern that keeps working without an SDK
+        assertTrue(NoopBaggageFactory.empty().asMap().isEmpty())
+        assertTrue(NoopBaggageFactory.create { }.asMap().isEmpty())
     }
 
     @Test
     fun testNoopOpenTelemetryBaggage() {
         assertSame(NoopBaggageFactory, NoopOpenTelemetry.baggage)
-        assertSame(NoopBaggage, NoopOpenTelemetry.baggage.create { put("k", "v") })
+        assertEquals("v", NoopOpenTelemetry.baggage.create { put("k", "v") }.getValue("k"))
     }
 
     @Test

@@ -8,10 +8,13 @@ import io.opentelemetry.kotlin.factory.IdGenerator
 import io.opentelemetry.kotlin.factory.IdGeneratorImpl
 import io.opentelemetry.kotlin.factory.ResourceFactory
 import io.opentelemetry.kotlin.factory.ResourceFactoryImpl
+import io.opentelemetry.kotlin.propagation.InternalPropagatorApi
+import io.opentelemetry.kotlin.propagation.Propagators
 import io.opentelemetry.kotlin.propagation.TextMapPropagator
 import io.opentelemetry.kotlin.resource.detectResource
 import kotlin.concurrent.Volatile
 
+@OptIn(InternalPropagatorApi::class)
 internal class OpenTelemetryConfigImpl(
     clock: Clock,
     private val resourceFactory: ResourceFactory = ResourceFactoryImpl(),
@@ -67,6 +70,12 @@ internal class OpenTelemetryConfigImpl(
     override fun propagator(action: PropagatorConfigDsl.() -> TextMapPropagator) {
         propagatorCfg.action()
     }
+
+    override var instrumentationPropagation: Boolean = true
+        set(value) {
+            field = value
+            Propagators.setEnabled(value)
+        }
 
     override fun idGenerator(action: () -> IdGenerator) {
         customIdGenerator = action

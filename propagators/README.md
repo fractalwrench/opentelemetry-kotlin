@@ -13,7 +13,22 @@ propagator.inject(context, headers, setter)
 
 No SDK instance or object factory is needed: a propagator operates on whichever object
 implementations belong to the `Context` it is given, so one instance is safe to share across
-backends. A propagator used with a no-op `Context` does nothing, so propagation stays switched off
-when the SDK is switched off.
+backends. `Context` and `Baggage` keep working when no SDK is installed (see `context-impl`), which
+means instrumentation can keep a trace alive across a remote call even if the application never
+configured a propagator. This matches opentelemetry-java, where `W3CBaggagePropagator.getInstance()`
+works alongside `OpenTelemetry.noop()`.
+
+An application that needs to guarantee no context leaves the process — for example where baggage
+could carry data the user has not consented to sharing — can switch these propagators off during SDK
+initialization:
+
+```kotlin
+createOpenTelemetry {
+    instrumentationPropagation = false
+}
+```
+
+That switch is process-wide, because the propagators it governs are obtained without an
+`OpenTelemetry` instance. It does not affect propagators the application configured explicitly.
 
 I've ported over W3C Baggage propagator only as an initial POC.

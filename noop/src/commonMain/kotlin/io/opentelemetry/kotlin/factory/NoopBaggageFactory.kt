@@ -1,14 +1,10 @@
 package io.opentelemetry.kotlin.factory
 
 import io.opentelemetry.kotlin.ExperimentalApi
-import io.opentelemetry.kotlin.baggage.Baggage
-import io.opentelemetry.kotlin.baggage.BaggageCreationAction
-import io.opentelemetry.kotlin.baggage.NoopBaggage
 
+/**
+ * Baggage is an API-level concern that stays functional when no SDK is installed, matching
+ * opentelemetry-java, so that instrumentation propagating baggage doesn't silently drop it.
+ */
 @OptIn(ExperimentalApi::class)
-internal object NoopBaggageFactory : BaggageFactory {
-
-    override fun empty(): Baggage = NoopBaggage
-
-    override fun create(action: BaggageCreationAction.() -> Unit): Baggage = NoopBaggage
-}
+internal val NoopBaggageFactory: BaggageFactory = BaggageFactoryImpl()

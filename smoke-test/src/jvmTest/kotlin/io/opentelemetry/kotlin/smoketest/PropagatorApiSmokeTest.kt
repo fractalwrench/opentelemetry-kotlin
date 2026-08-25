@@ -13,9 +13,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Steel thread for issue #851: instrumentation can obtain a working W3C baggage propagator from an
- * [OpenTelemetry] instance without the application having configured one, identically on both
- * backends, and gets nothing when the SDK is switched off.
+ * Steel thread for issue #851: instrumentation can obtain a working W3C baggage propagator without
+ * the application having configured one, identically on both backends and on a no-op SDK, unless
+ * the application explicitly switched propagation off.
  */
 @OptIn(ExperimentalApi::class)
 internal class PropagatorApiSmokeTest {
@@ -45,15 +45,20 @@ internal class PropagatorApiSmokeTest {
     }
 
     @Test
-    fun `a switched-off SDK propagates nothing`() {
-        val propagator = Propagators.create().w3cBaggage()
-        val context = NoopOpenTelemetry.context.root()
+    fun `a switched-off SDK still propagates baggage`() {
+        assertEquals(seed, roundTrip(NoopOpenTelemetry))
+    }
 
-        assertEquals(context, propagator.extract(context, seed, Getter), "extract should be inert")
-
-        val carrier = mutableMapOf<String, String>()
-        propagator.inject(context, carrier, Setter)
-        assertTrue(carrier.isEmpty(), "inject should write nothing")
+    @Test
+    fun `disabling instrumentation propagation stops it on every backend`() {
+        createOpenTelemetry { instrumentationPropagation = false }
+        try {
+            (backends() + ("noop" to NoopOpenTelemetry)).forEach { (name, otel) ->
+                assertTrue(roundTrip(otel).isEmpty(), "$name: should propagate nothing")
+            }
+        } finally {
+            createOpenTelemetry { instrumentationPropagation = true }
+        }
     }
 
     private fun backends(): List<Pair<String, OpenTelemetry>> = listOf(

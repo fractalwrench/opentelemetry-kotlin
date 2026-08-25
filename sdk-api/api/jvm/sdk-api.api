@@ -169,11 +169,13 @@ public abstract interface class io/opentelemetry/kotlin/init/OpenTelemetryConfig
 	public abstract fun attributeLimits (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun context (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun errorHandler (Lio/opentelemetry/kotlin/error/SdkErrorHandler;)V
+	public abstract fun getInstrumentationPropagation ()Z
 	public abstract fun idGenerator (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun loggerProvider (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun meterProvider (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun propagator (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun resourceDetection (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun setInstrumentationPropagation (Z)V
 	public abstract fun tracerProvider (Lkotlin/jvm/functions/Function1;)V
 }
 

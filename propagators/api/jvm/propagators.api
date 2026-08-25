@@ -1,3 +1,6 @@
+public abstract interface annotation class io/opentelemetry/kotlin/propagation/InternalPropagatorApi : java/lang/annotation/Annotation {
+}
+
 public abstract interface class io/opentelemetry/kotlin/propagation/PropagatorApi {
 	public abstract fun w3cBaggage ()Lio/opentelemetry/kotlin/propagation/TextMapPropagator;
 }
@@ -5,5 +8,7 @@ public abstract interface class io/opentelemetry/kotlin/propagation/PropagatorAp
 public final class io/opentelemetry/kotlin/propagation/Propagators {
 	public static final field INSTANCE Lio/opentelemetry/kotlin/propagation/Propagators;
 	public final fun create ()Lio/opentelemetry/kotlin/propagation/PropagatorApi;
+	public final fun setEnabled (Z)V
+	public final fun unrestricted ()Lio/opentelemetry/kotlin/propagation/PropagatorApi;
 }
 

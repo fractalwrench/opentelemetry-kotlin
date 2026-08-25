@@ -8,7 +8,7 @@ import io.opentelemetry.kotlin.init.B3Format
 import io.opentelemetry.kotlin.init.PropagatorConfigDsl
 import io.opentelemetry.extension.trace.propagation.B3Propagator as JavaB3Propagator
 
-@OptIn(ExperimentalApi::class)
+@OptIn(ExperimentalApi::class, InternalPropagatorApi::class)
 internal class CompatPropagatorConfigImpl : PropagatorConfigDsl {
 
     private var configured: TextMapPropagator = TextMapPropagatorAdapter(OtelJavaTextMapPropagator.noop())
@@ -20,7 +20,7 @@ internal class CompatPropagatorConfigImpl : PropagatorConfigDsl {
     }
 
     override fun w3cBaggage(): TextMapPropagator {
-        configured = Propagators.create().w3cBaggage()
+        configured = Propagators.unrestricted().w3cBaggage()
         return configured
     }
 

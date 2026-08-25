@@ -1,0 +1,25 @@
+public final class io/opentelemetry/kotlin/context/ContextKeyImpl : io/opentelemetry/kotlin/context/ContextKey {
+	public fun <init> (Ljava/lang/String;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/opentelemetry/kotlin/context/DefaultImplicitContextStorage : io/opentelemetry/kotlin/context/ImplicitContextStorage {
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public fun implicitContext ()Lio/opentelemetry/kotlin/context/Context;
+	public fun setImplicitContext (Lio/opentelemetry/kotlin/context/Context;)V
+}
+
+public final class io/opentelemetry/kotlin/factory/BaggageFactoryImpl : io/opentelemetry/kotlin/factory/BaggageFactory {
+	public fun <init> ()V
+	public fun create (Lkotlin/jvm/functions/Function1;)Lio/opentelemetry/kotlin/baggage/Baggage;
+	public fun empty ()Lio/opentelemetry/kotlin/baggage/Baggage;
+}
+
+public final class io/opentelemetry/kotlin/factory/ContextFactoryImpl : io/opentelemetry/kotlin/factory/ContextFactory {
+	public fun <init> (Lio/opentelemetry/kotlin/factory/SpanFactory;Lio/opentelemetry/kotlin/error/SdkErrorHandler;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Lio/opentelemetry/kotlin/factory/SpanFactory;Lio/opentelemetry/kotlin/error/SdkErrorHandler;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun createKey (Ljava/lang/String;)Lio/opentelemetry/kotlin/context/ContextKey;
+	public fun implicit ()Lio/opentelemetry/kotlin/context/Context;
+	public fun root ()Lio/opentelemetry/kotlin/context/Context;
+}
+

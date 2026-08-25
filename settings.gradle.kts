@@ -19,6 +19,7 @@ include(
     ":api",
     ":api-ext",
     ":propagators",
+    ":context-impl",
     ":context-coroutines",
     ":sdk-ext",
     ":sdk-api",

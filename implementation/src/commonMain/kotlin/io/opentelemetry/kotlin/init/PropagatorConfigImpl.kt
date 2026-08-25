@@ -10,6 +10,7 @@ import io.opentelemetry.kotlin.factory.TraceFlagsFactory
 import io.opentelemetry.kotlin.factory.TraceStateFactory
 import io.opentelemetry.kotlin.propagation.B3Propagator
 import io.opentelemetry.kotlin.propagation.CompositeTextMapPropagator
+import io.opentelemetry.kotlin.propagation.InternalPropagatorApi
 import io.opentelemetry.kotlin.propagation.Propagators
 import io.opentelemetry.kotlin.propagation.TextMapGetter
 import io.opentelemetry.kotlin.propagation.TextMapPropagator
@@ -17,7 +18,7 @@ import io.opentelemetry.kotlin.propagation.TextMapSetter
 import io.opentelemetry.kotlin.propagation.W3CTraceContextPropagator
 import kotlin.concurrent.Volatile
 
-@OptIn(ExperimentalApi::class)
+@OptIn(ExperimentalApi::class, InternalPropagatorApi::class)
 internal class PropagatorConfigImpl : PropagatorConfigDsl {
 
     private var configured: TextMapPropagator = NoopOpenTelemetry.propagator
@@ -34,7 +35,7 @@ internal class PropagatorConfigImpl : PropagatorConfigDsl {
     }
 
     override fun w3cBaggage(): TextMapPropagator {
-        configured = Propagators.create().w3cBaggage()
+        configured = Propagators.unrestricted().w3cBaggage()
         return configured
     }
 
