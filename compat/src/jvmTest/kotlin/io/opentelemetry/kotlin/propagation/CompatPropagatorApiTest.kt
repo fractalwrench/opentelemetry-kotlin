@@ -7,6 +7,7 @@ import io.opentelemetry.kotlin.context.ContextKey
 import io.opentelemetry.kotlin.factory.CompatContextFactory
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -86,9 +87,9 @@ internal class CompatPropagatorApiTest {
     }
 
     @Test
-    fun `w3cBaggage returns an adapter wrapping the Java W3CBaggagePropagator`() {
+    fun `w3cBaggage returns the shared Kotlin baggage propagator`() {
         val propagator = dsl.w3cBaggage()
-        assertTrue(propagator is TextMapPropagatorAdapter)
+        assertFalse(propagator is TextMapPropagatorAdapter)
         assertEquals(listOf("baggage"), propagator.fields().toList())
     }
 

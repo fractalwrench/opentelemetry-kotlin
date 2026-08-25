@@ -70,14 +70,15 @@ internal class CorePropagatorApiTest {
     }
 
     @Test
-    fun `w3cBaggage returns the W3C baggage propagator singleton`() {
-        assertSame(W3CBaggagePropagator, dsl.w3cBaggage())
+    fun `w3cBaggage returns the same W3C baggage propagator instance each time`() {
+        assertSame(dsl.w3cBaggage(), dsl.w3cBaggage())
+        assertEquals(listOf("baggage"), dsl.w3cBaggage().fields().toList())
     }
 
     @Test
     fun `w3cBaggage call captures the result and buildPropagator returns it`() {
-        dsl.w3cBaggage()
-        assertSame(W3CBaggagePropagator, dsl.buildPropagator())
+        val captured = dsl.w3cBaggage()
+        assertSame(captured, dsl.buildPropagator())
     }
 
     @Test

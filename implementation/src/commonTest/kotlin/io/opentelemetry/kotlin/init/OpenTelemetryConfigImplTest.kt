@@ -16,7 +16,6 @@ import io.opentelemetry.kotlin.error.SdkErrorSeverity
 import io.opentelemetry.kotlin.factory.FakeIdGenerator
 import io.opentelemetry.kotlin.logging.export.FakeLogRecordProcessor
 import io.opentelemetry.kotlin.propagation.CompositeTextMapPropagator
-import io.opentelemetry.kotlin.propagation.W3CBaggagePropagator
 import io.opentelemetry.kotlin.tracing.export.FakeSpanProcessor
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -44,7 +43,7 @@ internal class OpenTelemetryConfigImplTest {
         val cfg = OpenTelemetryConfigImpl(clock).apply {
             propagator { w3cBaggage() }
         }
-        assertSame(W3CBaggagePropagator, cfg.propagatorCfg.buildPropagator())
+        assertEquals(listOf("baggage"), cfg.propagatorCfg.buildPropagator().fields().toList())
     }
 
     @Test

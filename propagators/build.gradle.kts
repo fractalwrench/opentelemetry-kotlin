@@ -4,6 +4,7 @@ plugins {
     id("io.opentelemetry.kotlin.build-logic")
     id("signing")
     id("com.vanniktech.maven.publish")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 kotlin {
@@ -11,7 +12,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(project(":api"))
-                api(project(":propagators"))
             }
         }
     }

@@ -1,16 +1,21 @@
 package io.opentelemetry.kotlin.init
 
 import io.opentelemetry.kotlin.ExperimentalApi
+import io.opentelemetry.kotlin.propagation.PropagatorApi
 import io.opentelemetry.kotlin.propagation.TextMapPropagator
 
 /**
  * Configures the [TextMapPropagator] used to inject and extract context across process boundaries.
  *
+ * Propagators that are also available to instrumentation at runtime are inherited from
+ * [PropagatorApi], so the SDK config DSL and [io.opentelemetry.kotlin.propagation.Propagators]
+ * expose the same implementations.
+ *
  * https://opentelemetry.io/docs/specs/otel/context/api-propagators/
  */
 @ExperimentalApi
 @ConfigDsl
-public interface PropagatorConfigDsl {
+public interface PropagatorConfigDsl : PropagatorApi {
 
     /**
      * Returns a [TextMapPropagator] that sequentially delegates to each of [propagators].
@@ -18,14 +23,6 @@ public interface PropagatorConfigDsl {
      * https://opentelemetry.io/docs/specs/otel/context/api-propagators/#composite-propagator
      */
     public fun composite(vararg propagators: TextMapPropagator): TextMapPropagator
-
-    /**
-     * Returns a [TextMapPropagator] that injects and extracts [io.opentelemetry.kotlin.baggage.Baggage]
-     * via the W3C `baggage` HTTP header.
-     *
-     * https://www.w3.org/TR/baggage/
-     */
-    public fun w3cBaggage(): TextMapPropagator
 
     /**
      * Returns a [TextMapPropagator] that injects and extracts the current span context

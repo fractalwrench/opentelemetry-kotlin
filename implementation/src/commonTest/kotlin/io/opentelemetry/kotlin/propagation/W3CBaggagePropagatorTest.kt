@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalApi::class)
 internal class W3CBaggagePropagatorTest {
 
-    private val propagator = W3CBaggagePropagator
+    private val propagator = Propagators.create().w3cBaggage()
     private val contextFactory = ContextFactoryImpl(SpanFactoryImpl(SpanContextFactoryImpl(IdGeneratorImpl())))
 
     @Test

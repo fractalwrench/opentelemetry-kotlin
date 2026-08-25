@@ -3,9 +3,38 @@ package io.opentelemetry.kotlin.propagation
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.baggage.Baggage
 import io.opentelemetry.kotlin.baggage.BaggageEntry
-import io.opentelemetry.kotlin.baggage.BaggageEntryMetadataImpl
-import io.opentelemetry.kotlin.baggage.BaggageImpl
+import io.opentelemetry.kotlin.baggage.BaggageEntryMetadata
 import io.opentelemetry.kotlin.context.Context
+
+private const val FIELD = "baggage"
+private const val ENTRY_DELIMITER = ','
+private const val KEY_VALUE_DELIMITER = '='
+private const val METADATA_DELIMITER = ';'
+private const val PERCENT_CHAR = '%'
+private const val SPACE = ' '
+private const val HTAB = '\t'
+private const val MAX_HEADER_BYTES = 8192
+private const val MAX_ENTRY_BYTES = 4096
+private val FIELDS = listOf(FIELD)
+private const val PERCENT = 0x25
+private const val BYTE_MASK = 0xFF
+private const val HEX_SHIFT = 4
+private const val HEX_MASK = 0xF
+private const val DECIMAL_BASE = 10
+private const val PERCENT_SEQUENCE_LENGTH = 3
+private const val OCTET_EXCLAIM = 0x21
+private const val OCTET_HASH = 0x23
+private const val OCTET_PLUS = 0x2B
+private const val OCTET_DASH = 0x2D
+private const val OCTET_COLON = 0x3A
+private const val OCTET_LT = 0x3C
+private const val OCTET_LBRACKET = 0x5B
+private const val OCTET_RBRACKET = 0x5D
+private const val OCTET_TILDE = 0x7E
+private val HEX = charArrayOf(
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+)
 
 /**
  * W3C Baggage HTTP header propagator.
@@ -14,18 +43,6 @@ import io.opentelemetry.kotlin.context.Context
  */
 @OptIn(ExperimentalApi::class)
 internal object W3CBaggagePropagator : TextMapPropagator {
-
-    private const val FIELD = "baggage"
-    private const val ENTRY_DELIMITER = ','
-    private const val KEY_VALUE_DELIMITER = '='
-    private const val METADATA_DELIMITER = ';'
-    private const val PERCENT_CHAR = '%'
-    private const val SPACE = ' '
-    private const val HTAB = '\t'
-    private const val MAX_HEADER_BYTES = 8192
-    private const val MAX_ENTRY_BYTES = 4096
-
-    private val FIELDS = listOf(FIELD)
 
     override fun fields(): Collection<String> = FIELDS
 
@@ -43,7 +60,7 @@ internal object W3CBaggagePropagator : TextMapPropagator {
         if (combined.isEmpty()) {
             return context
         }
-        val baggage = decode(combined) ?: return context
+        val baggage = decode(context, combined) ?: return context
         return context.storeBaggage(baggage)
     }
 
@@ -83,13 +100,14 @@ internal object W3CBaggagePropagator : TextMapPropagator {
         return sb.toString()
     }
 
-    private fun decode(header: String): Baggage? {
-        var baggage: Baggage = BaggageImpl.EMPTY
-        for (rawElement in header.split(ENTRY_DELIMITER)) {
-            val parsed = parseElement(rawElement) ?: continue
-            baggage = baggage.set(parsed.key, parsed.value, BaggageEntryMetadataImpl(parsed.metadata))
+    private fun decode(context: Context, header: String): Baggage? {
+        val parsed = header.split(ENTRY_DELIMITER).mapNotNull(::parseElement)
+        if (parsed.isEmpty()) {
+            return null
         }
-        return baggage.takeIf { it !== BaggageImpl.EMPTY }
+        var baggage = context.clearBaggage().extractBaggage()
+        parsed.forEach { baggage = baggage.set(it.key, it.value, ParsedMetadata(it.metadata)) }
+        return baggage.takeIf { it.asMap().isNotEmpty() }
     }
 
     private fun parseElement(rawElement: String): ParsedEntry? {
@@ -122,6 +140,8 @@ internal object W3CBaggagePropagator : TextMapPropagator {
     }
 
     private class ParsedEntry(val key: String, val value: String, val metadata: String)
+
+    private class ParsedMetadata(override val value: String) : BaggageEntryMetadata
 
     /**
      * Percent-encode bytes outside `baggage-octet`. The `%` byte is also encoded so the
@@ -192,25 +212,4 @@ internal object W3CBaggagePropagator : TextMapPropagator {
         in 'A'..'F' -> c - 'A' + DECIMAL_BASE
         else -> -1
     }
-
-    private const val PERCENT = 0x25
-    private const val BYTE_MASK = 0xFF
-    private const val HEX_SHIFT = 4
-    private const val HEX_MASK = 0xF
-    private const val DECIMAL_BASE = 10
-    private const val PERCENT_SEQUENCE_LENGTH = 3
-    private const val OCTET_EXCLAIM = 0x21
-    private const val OCTET_HASH = 0x23
-    private const val OCTET_PLUS = 0x2B
-    private const val OCTET_DASH = 0x2D
-    private const val OCTET_COLON = 0x3A
-    private const val OCTET_LT = 0x3C
-    private const val OCTET_LBRACKET = 0x5B
-    private const val OCTET_RBRACKET = 0x5D
-    private const val OCTET_TILDE = 0x7E
-
-    private val HEX = charArrayOf(
-        '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-    )
 }

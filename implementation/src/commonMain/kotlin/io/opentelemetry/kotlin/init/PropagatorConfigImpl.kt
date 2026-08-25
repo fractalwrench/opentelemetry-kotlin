@@ -10,10 +10,10 @@ import io.opentelemetry.kotlin.factory.TraceFlagsFactory
 import io.opentelemetry.kotlin.factory.TraceStateFactory
 import io.opentelemetry.kotlin.propagation.B3Propagator
 import io.opentelemetry.kotlin.propagation.CompositeTextMapPropagator
+import io.opentelemetry.kotlin.propagation.Propagators
 import io.opentelemetry.kotlin.propagation.TextMapGetter
 import io.opentelemetry.kotlin.propagation.TextMapPropagator
 import io.opentelemetry.kotlin.propagation.TextMapSetter
-import io.opentelemetry.kotlin.propagation.W3CBaggagePropagator
 import io.opentelemetry.kotlin.propagation.W3CTraceContextPropagator
 import kotlin.concurrent.Volatile
 
@@ -34,7 +34,7 @@ internal class PropagatorConfigImpl : PropagatorConfigDsl {
     }
 
     override fun w3cBaggage(): TextMapPropagator {
-        configured = W3CBaggagePropagator
+        configured = Propagators.create().w3cBaggage()
         return configured
     }
 
