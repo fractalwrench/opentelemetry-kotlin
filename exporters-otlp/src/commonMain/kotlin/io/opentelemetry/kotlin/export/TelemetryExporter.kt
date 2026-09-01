@@ -1,8 +1,9 @@
 package io.opentelemetry.kotlin.export
 
+import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.export.OperationResultCode.Success
+import io.opentelemetry.kotlin.ioDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -16,14 +17,15 @@ internal class TelemetryExporter<T>(
     private val initialDelayMs: Long,
     private val maxAttemptIntervalMs: Long,
     private val maxAttempts: Int,
-    coroutineContext: CoroutineContext = Dispatchers.Default,
+    private val sdkErrorHandler: SdkErrorHandler,
+    coroutineContext: CoroutineContext = ioDispatcher,
     private val random: Random = Random.Default,
     private val exportAction: suspend (telemetry: List<T>) -> OtlpResponse,
 ) : TelemetryCloseable {
 
     private val shutdownState: MutableShutdownState = MutableShutdownState()
     private val scope: CoroutineScope =
-        CoroutineScope(SupervisorJob() + coroutineContext + telemetryExceptionHandler("OTLP exporter"))
+        CoroutineScope(SupervisorJob() + coroutineContext + telemetryExceptionHandler("OTLP exporter", sdkErrorHandler))
 
     /**
      * Exports telemetry via coroutines and uses exponential backoff when a failure

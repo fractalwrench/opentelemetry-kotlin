@@ -11,6 +11,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.utils.io.readRemaining
+import io.opentelemetry.kotlin.error.SdkErrorHandler
+import io.opentelemetry.kotlin.error.guardOrDefaultSuspend
 import io.opentelemetry.kotlin.export.OtlpClient.Companion.MAX_ERROR_BODY_BYTES
 import io.opentelemetry.kotlin.export.OtlpResponse.ClientError
 import io.opentelemetry.kotlin.export.OtlpResponse.PartialSuccess
@@ -18,25 +20,24 @@ import io.opentelemetry.kotlin.export.OtlpResponse.RetryableError
 import io.opentelemetry.kotlin.export.OtlpResponse.ServerError
 import io.opentelemetry.kotlin.export.OtlpResponse.Success
 import io.opentelemetry.kotlin.export.OtlpResponse.Unknown
+import io.opentelemetry.kotlin.logging.data.LogRecordData
 import io.opentelemetry.kotlin.logging.export.deserializeLogRecordPartialSuccess
 import io.opentelemetry.kotlin.logging.export.toProtobufByteArray
-import io.opentelemetry.kotlin.logging.model.ReadableLogRecord
-import io.opentelemetry.kotlin.platformLog
 import io.opentelemetry.kotlin.tracing.data.SpanData
 import io.opentelemetry.kotlin.tracing.export.deserializeTraceRecordPartialSuccess
 import io.opentelemetry.kotlin.tracing.export.toProtobufByteArray
 import kotlinx.io.readByteArray
-import kotlin.coroutines.cancellation.CancellationException
 
 internal class OtlpClient(
     private val baseUrl: String,
-    private val httpClient: HttpClient = defaultHttpClient
+    private val httpClient: HttpClient,
+    private val sdkErrorHandler: SdkErrorHandler,
 ) {
 
     private val contentType = ContentType.parse("application/x-protobuf")
     private val userAgent = "OTel-OTLP-Exporter-Kotlin/${BuildKonfig.VERSION}"
 
-    suspend fun exportLogs(telemetry: List<ReadableLogRecord>): OtlpResponse = exportTelemetry(
+    suspend fun exportLogs(telemetry: List<LogRecordData>): OtlpResponse = exportTelemetry(
         OtlpEndpoint.Logs,
         telemetry::toProtobufByteArray,
         ByteArray::deserializeLogRecordPartialSuccess
@@ -52,37 +53,32 @@ internal class OtlpClient(
         endpoint: OtlpEndpoint,
         requestSerializer: () -> ByteArray,
         parsePartialSuccess: (body: ByteArray) -> OtlpPartialSuccess?,
-    ): OtlpResponse {
-        return try {
-            val url = "$baseUrl/${endpoint.path}"
-            val response = httpClient.post(url) {
-                compress("gzip")
-                contentType(contentType)
-                header(HttpHeaders.UserAgent, userAgent)
-                setBody(requestSerializer())
+    ): OtlpResponse = sdkErrorHandler.guardOrDefaultSuspend(Unknown, "OTLP export failed") {
+        val url = "$baseUrl/${endpoint.path}"
+        val response = httpClient.post(url) {
+            compress("gzip")
+            contentType(contentType)
+            header(HttpHeaders.UserAgent, userAgent)
+            setBody(requestSerializer())
+        }
+        // A 200 can still be a partial success and error responses can carry an error message,
+        // so the body is always parsed rather than relying on the status code alone (see #558).
+        val body = parsePartialSuccess(response.boundedBodyBytes())
+        when (val code = response.status.value) {
+            200 -> when (body) {
+                null -> Success
+                else -> PartialSuccess(body.rejectedCount, body.errorMessage)
             }
-            // A 200 can still be a partial success and error responses can carry an error message,
-            // so the body is always parsed rather than relying on the status code alone (see #558).
-            val body = parsePartialSuccess(response.boundedBodyBytes())
-            when (val code = response.status.value) {
-                200 -> when (body) {
-                    null -> Success
-                    else -> PartialSuccess(body.rejectedCount, body.errorMessage)
-                }
-                429, 502, 503, 504 -> RetryableError(
-                    code,
-                    response.parseRetryAfterMs(),
-                    body?.errorMessage,
-                )
-                in 400..499 -> ClientError(code, body?.errorMessage)
-                in 500..599 -> ServerError(code, body?.errorMessage)
-                else -> Unknown
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            platformLog("OTLP export failed: ${e.message}")
-            Unknown
+
+            429, 502, 503, 504 -> RetryableError(
+                code,
+                response.parseRetryAfterMs(),
+                body?.errorMessage,
+            )
+
+            in 400..499 -> ClientError(code, body?.errorMessage)
+            in 500..599 -> ServerError(code, body?.errorMessage)
+            else -> Unknown
         }
     }
 

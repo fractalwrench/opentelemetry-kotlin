@@ -1,27 +1,29 @@
 package io.opentelemetry.kotlin.export
 
+import io.opentelemetry.kotlin.error.guardOrDefaultSuspend
+import io.opentelemetry.kotlin.ioDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeout
 
 internal class BatchTelemetryProcessor<T>(
     private val config: BatchTelemetryConfig,
-    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    dispatcher: CoroutineDispatcher = ioDispatcher,
     private val exportAction: suspend (telemetry: List<T>) -> OperationResultCode,
 ) : TelemetryCloseable {
 
     private val shutdownState: MutableShutdownState = MutableShutdownState()
     private val scope =
-        CoroutineScope(SupervisorJob() + dispatcher + telemetryExceptionHandler("Batch processor"))
+        CoroutineScope(
+            SupervisorJob() + dispatcher + telemetryExceptionHandler("Batch processor", config.sdkErrorHandler)
+        )
     private val mutex = Mutex()
-    private val queue = mutableListOf<T>()
+    private val queue = ArrayDeque<T>()
 
     init {
         scope.launch {
@@ -34,7 +36,7 @@ internal class BatchTelemetryProcessor<T>(
 
     fun processTelemetry(telemetry: T) {
         shutdownState.execute {
-            if (queue.size <= config.maxQueueSize) {
+            if (queue.size < config.maxQueueSize) {
                 queue.add(telemetry)
             }
         }
@@ -57,21 +59,21 @@ internal class BatchTelemetryProcessor<T>(
         }
 
     private suspend fun flushInternal() {
-        while (queue.isNotEmpty()) {
-            val batch = mutableListOf<T>()
-            mutex.withLock {
+        while (true) {
+            val batch = mutex.withLock {
                 val size = minOf(queue.size, config.maxExportBatchSize)
-                repeat(size) { batch += queue.removeAt(0) }
+                List(size) { queue.removeFirst() }
             }
 
-            if (batch.isNotEmpty()) {
-                try {
-                    withTimeout(config.exportTimeoutMs) {
-                        exportAction(batch)
-                    }
-                } catch (ignored: Throwable) {
-                    // drop, continue as normal.
-                }
+            if (batch.isEmpty()) {
+                return
+            }
+
+            config.sdkErrorHandler.guardOrDefaultSuspend(
+                OperationResultCode.Failure,
+                "Batch export failed",
+            ) {
+                runWithTimeout(config.exportTimeoutMs) { exportAction(batch) }
             }
         }
     }

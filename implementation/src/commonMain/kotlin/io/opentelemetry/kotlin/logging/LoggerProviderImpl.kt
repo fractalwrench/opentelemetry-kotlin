@@ -3,6 +3,11 @@ package io.opentelemetry.kotlin.logging
 import io.opentelemetry.kotlin.Clock
 import io.opentelemetry.kotlin.NoopOpenTelemetry
 import io.opentelemetry.kotlin.attributes.AttributesMutator
+import io.opentelemetry.kotlin.error.SdkError
+import io.opentelemetry.kotlin.error.SdkErrorSeverity
+import io.opentelemetry.kotlin.error.guardOrDefault
+import io.opentelemetry.kotlin.error.guardOrDefaultSuspend
+import io.opentelemetry.kotlin.error.reportError
 import io.opentelemetry.kotlin.export.BatchTelemetryDefaults
 import io.opentelemetry.kotlin.export.CompositeTelemetryCloseable
 import io.opentelemetry.kotlin.export.MutableShutdownState
@@ -12,7 +17,6 @@ import io.opentelemetry.kotlin.export.runWithTimeout
 import io.opentelemetry.kotlin.factory.ContextFactory
 import io.opentelemetry.kotlin.factory.SpanContextFactory
 import io.opentelemetry.kotlin.init.config.LoggingConfig
-import io.opentelemetry.kotlin.platformLog
 import io.opentelemetry.kotlin.provider.ApiProviderImpl
 
 internal class LoggerProviderImpl(
@@ -22,10 +26,11 @@ internal class LoggerProviderImpl(
     spanContextFactory: SpanContextFactory,
 ) : LoggerProvider, TelemetryCloseable {
 
+    private val sdkErrorHandler = loggingConfig.sdkErrorHandler
     private val shutdownState: MutableShutdownState = MutableShutdownState()
     private val closeable: TelemetryCloseable = CompositeTelemetryCloseable(
         loggingConfig.processor?.let { listOf(it) } ?: emptyList(),
-        loggingConfig.sdkErrorHandler,
+        sdkErrorHandler,
     )
     private val noopLogger = NoopOpenTelemetry.loggerProvider.getLogger("")
 
@@ -57,17 +62,29 @@ internal class LoggerProviderImpl(
         schemaUrl: String?,
         attributes: (AttributesMutator.() -> Unit)?
     ): Logger =
-        shutdownState.ifActiveOrElse(noopLogger) {
-            if (name.isEmpty()) {
-                platformLog("Logger requested without instrumentation scope name")
+        sdkErrorHandler.guardOrDefault(noopLogger, "LoggerProvider.getLogger failed") {
+            shutdownState.ifActiveOrElse(noopLogger) {
+                if (name.isEmpty()) {
+                    sdkErrorHandler.reportError(
+                        SdkError.ApiMisuse(
+                            api = "LoggerProvider.getLogger",
+                            message = "Logger requested without instrumentation scope name",
+                            severity = SdkErrorSeverity.WARNING,
+                        )
+                    )
+                }
+                val key = apiProvider.createInstrumentationScopeInfo(name, version, schemaUrl, attributes)
+                apiProvider.getOrCreate(key)
             }
-            val key = apiProvider.createInstrumentationScopeInfo(name, version, schemaUrl, attributes)
-            apiProvider.getOrCreate(key)
         }
 
     override suspend fun forceFlush(): OperationResultCode =
-        runWithTimeout(BatchTelemetryDefaults.FORCE_FLUSH_TIMEOUT_MS, closeable::forceFlush)
+        sdkErrorHandler.guardOrDefaultSuspend(OperationResultCode.Failure, "LoggerProvider.forceFlush failed") {
+            runWithTimeout(BatchTelemetryDefaults.FORCE_FLUSH_TIMEOUT_MS, closeable::forceFlush)
+        }
 
     override suspend fun shutdown(): OperationResultCode =
-        shutdownState.shutdown(BatchTelemetryDefaults.SHUTDOWN_TIMEOUT_MS, closeable::shutdown)
+        sdkErrorHandler.guardOrDefaultSuspend(OperationResultCode.Failure, "LoggerProvider.shutdown failed") {
+            shutdownState.shutdown(BatchTelemetryDefaults.SHUTDOWN_TIMEOUT_MS, closeable::shutdown)
+        }
 }

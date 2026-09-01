@@ -2,6 +2,7 @@ package io.opentelemetry.kotlin.propagation
 
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.context.Context
+import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
 import io.opentelemetry.kotlin.factory.ContextFactoryImpl
 import io.opentelemetry.kotlin.factory.IdGeneratorImpl
 import io.opentelemetry.kotlin.factory.SpanContextFactoryImpl
@@ -37,6 +38,7 @@ internal class W3CTraceContextPropagatorTest {
         traceStateFactory = traceStateFactory,
         spanContextFactory = spanContextFactory,
         spanFactory = spanFactory,
+        sdkErrorHandler = NoopSdkErrorHandler,
     )
 
     private val traceId = "0af7651916cd43dd8448eb211c80319c"
@@ -241,6 +243,24 @@ internal class W3CTraceContextPropagatorTest {
         assertFalse(span.isRecording())
         assertEquals(traceId, span.spanContext.traceId)
         assertEquals(spanId, span.spanContext.spanId)
+    }
+
+    @Test
+    fun `extract still succeeds when tracestate exceeds the combined header limit`() {
+        val large = (0 until 4).joinToString(",") { "k$it=" + "x".repeat(126) }
+        val carrier = mapOf(
+            "traceparent" to "00-$traceId-$spanId-01",
+            "tracestate" to "keep=ok,$large",
+        )
+        val result = propagator.extract(contextFactory.root(), carrier, MapTextMapGetter)
+        val sc = result.extractSpan().spanContext
+
+        assertTrue(sc.isValid)
+        assertTrue(sc.isRemote)
+        assertEquals(traceId, sc.traceId)
+        assertEquals("ok", sc.traceState.get("keep"))
+        assertEquals(null, sc.traceState.get("k3"))
+        assertTrue(W3CTraceStateCodec.encode(sc.traceState.asMap()).length <= 512)
     }
 
     @Test

@@ -26,7 +26,7 @@ internal class CompatOpenTelemetryConfig(
 ) : OpenTelemetryConfigDsl {
 
     @Volatile private var configuredErrorHandler: SdkErrorHandler = NoopSdkErrorHandler
-    private val sdkErrorHandler = GuardedSdkErrorHandler { configuredErrorHandler.onError(it) }
+    internal val sdkErrorHandler = GuardedSdkErrorHandler { configuredErrorHandler.onError(it) }
 
     internal val tracerProviderConfig = CompatTracerProviderConfig(clock, sdkErrorHandler)
     internal val loggerProviderConfig = CompatLoggerProviderConfig(clock, sdkErrorHandler)
@@ -36,19 +36,20 @@ internal class CompatOpenTelemetryConfig(
 
     private var customIdGenerator: (() -> IdGenerator)? = null
 
+    override fun configFile(path: String) {
+        // no-op
+    }
+
     override fun attributeLimits(action: AttributeLimitsConfigDsl.() -> Unit) {
         globalAttributeLimits.action()
     }
 
     private val globalResourceAttrs = CompatAttributesModel()
     private var globalResourceSchemaUrl: String? = null
-    private var serviceNameOverride: String? = null
-
-    override var serviceName: String
-        get() = serviceNameOverride ?: "unknown_service"
+    override var serviceName: String? = null
         set(value) {
-            serviceNameOverride = value
-            globalResourceAttrs.setStringAttribute(ServiceAttributes.SERVICE_NAME, value)
+            field = value
+            value?.let { globalResourceAttrs.setStringAttribute(ServiceAttributes.SERVICE_NAME, it) }
         }
 
     override fun resource(schemaUrl: String?, attributes: AttributesMutator.() -> Unit) {

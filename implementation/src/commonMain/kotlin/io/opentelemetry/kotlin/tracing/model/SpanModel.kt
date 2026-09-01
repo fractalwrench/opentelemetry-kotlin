@@ -8,6 +8,7 @@ import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.attributes.AttributesMutator
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.error.guard
+import io.opentelemetry.kotlin.error.guardOrDefault
 import io.opentelemetry.kotlin.init.config.SpanLimitConfig
 import io.opentelemetry.kotlin.resource.Resource
 import io.opentelemetry.kotlin.tracing.SpanContext
@@ -19,6 +20,8 @@ import io.opentelemetry.kotlin.tracing.StatusData
 import io.opentelemetry.kotlin.tracing.data.SpanEventData
 import io.opentelemetry.kotlin.tracing.data.SpanLinkData
 import io.opentelemetry.kotlin.tracing.export.SpanProcessor
+import io.opentelemetry.kotlin.tracing.frozenCopy
+import io.opentelemetry.kotlin.tracing.toSnapshot
 
 /**
  * The single source of truth for span state. This is not exposed to consumers of the API - they
@@ -64,30 +67,49 @@ internal class SpanModel(
 
     override var spanContext: SpanContext
         get() = lock.read { spanContextImpl }
-        set(value) = lock.write {
-            if (isRecordingInternal()) {
-                spanContextImpl = value
-            }
+        set(value) = mutate("Span.spanContext failed") {
+            spanContextImpl = value
         }
 
-    override fun setName(name: String) {
-        lock.write {
-            if (isRecordingInternal()) {
-                nameImpl = name
+    /**
+     * Runs [action] behind the write lock if the span is still recording. Input supplied by the
+     * host application must never escape a public API method, so a failure is reported and
+     * swallowed.
+     */
+    private inline fun mutate(details: String, action: () -> Unit) {
+        sdkErrorHandler.guard(details) {
+            lock.write {
+                if (isRecordingInternal()) {
+                    action()
+                }
             }
         }
     }
 
+    override fun setName(name: String) {
+        mutate("Span.setName failed") {
+            nameImpl = name
+        }
+    }
+
     override fun setStatus(status: StatusData) {
-        lock.write {
-            if (isRecordingInternal() && statusImpl !is StatusData.Ok) {
+        if (status is StatusData.Unset) {
+            return
+        }
+        mutate("Span.setStatus failed") {
+            if (statusImpl !is StatusData.Ok) {
                 statusImpl = status
             }
         }
     }
 
     override fun end() {
-        endInternal(clock.now())
+        // a broken clock must not stop the span ending, so fall back to a zero timestamp
+        endInternal(
+            sdkErrorHandler.guardOrDefault(0L, "Clock.now failed during Span.end") {
+                clock.now()
+            }
+        )
     }
 
     override fun end(timestamp: Long) {
@@ -96,25 +118,44 @@ internal class SpanModel(
 
     @Suppress("NOTHING_TO_INLINE")
     private inline fun endInternal(timestamp: Long) {
-        lock.write {
-            if (state == State.STARTED) {
+        sdkErrorHandler.guard("Span.end failed") {
+            val shouldEnd = lock.write {
+                if (state != State.STARTED) {
+                    return@write false
+                }
                 state = State.ENDING
                 endTimestampImpl = timestamp
-                sdkErrorHandler.guard {
-                    processor?.onEnding(ReadWriteSpanImpl(this))
-                }
+                true
+            }
+            if (!shouldEnd) {
+                return
+            }
+            sdkErrorHandler.guard {
+                processor?.takeIf(SpanProcessor::isOnEndingRequired)
+                    ?.onEnding(ReadWriteSpanImpl(this))
+            }
+            val toExport = lock.write {
                 state = State.ENDED
+                // take a snapshot so that processors retain plain data rather than this
+                // model, releasing its properties once the span
+                // has ended. Only built if a processor needs it.
+                processor?.takeIf(SpanProcessor::isEndRequired)?.let { endProcessor ->
+                    endProcessor to toSpanData()
+                }
+            }
+            if (toExport != null) {
+                val (endProcessor, snapshot) = toExport
                 sdkErrorHandler.guard {
-                    // take a snapshot so that processors retain plain data rather than this
-                    // model, releasing its properties once the span
-                    // has ended. Only built if a processor needs it.
-                    processor?.takeIf(SpanProcessor::isEndRequired)?.onEnd(toSpanData())
+                    endProcessor.onEnd(snapshot)
                 }
             }
         }
     }
 
-    override fun isRecording(): Boolean = lock.read { isRecordingInternal() }
+    override fun isRecording(): Boolean =
+        sdkErrorHandler.guardOrDefault(false, "Span.isRecording failed") {
+            lock.read { isRecordingInternal() }
+        }
 
     /**
      * Reads [state] without acquiring [lock]. Callers must already hold [lock].
@@ -153,14 +194,12 @@ internal class SpanModel(
         spanContext: SpanContext,
         attributes: (AttributesMutator.() -> Unit)?
     ) {
-        lock.write {
-            if (isRecordingInternal()) {
-                if (linksList.size < spanLimitConfig.linkCountLimit) {
-                    val link = buildSpanLink(spanContext, attributes, spanLimitConfig)
-                    linksList.add(link)
-                } else {
-                    droppedLinksCountImpl++
-                }
+        mutate("Span.addLink failed") {
+            if (linksList.size < spanLimitConfig.linkCountLimit) {
+                val link = buildSpanLink(spanContext, attributes, spanLimitConfig)
+                linksList.add(link)
+            } else {
+                droppedLinksCountImpl++
             }
         }
     }
@@ -170,21 +209,19 @@ internal class SpanModel(
         timestamp: Long?,
         attributes: (AttributesMutator.() -> Unit)?
     ) {
-        lock.write {
-            if (isRecordingInternal()) {
-                if (eventsList.size < spanLimitConfig.eventCountLimit) {
-                    val container = AttributesModel(
-                        attributeLimit = spanLimitConfig.attributeCountPerEventLimit,
-                        attributeValueLengthLimit = spanLimitConfig.attributeValueLengthLimit
-                    )
-                    if (attributes != null) {
-                        attributes(container)
-                    }
-                    val event = SpanEventImpl(name, timestamp ?: clock.now(), container)
-                    eventsList.add(event)
-                } else {
-                    droppedEventsCountImpl++
+        mutate("Span.addEvent failed") {
+            if (eventsList.size < spanLimitConfig.eventCountLimit) {
+                val container = AttributesModel(
+                    attributeLimit = spanLimitConfig.attributeCountPerEventLimit,
+                    attributeValueLengthLimit = spanLimitConfig.attributeValueLengthLimit
+                )
+                if (attributes != null) {
+                    attributes(container)
                 }
+                val event = SpanEventImpl(name, timestamp ?: clock.now(), container)
+                eventsList.add(event)
+            } else {
+                droppedEventsCountImpl++
             }
         }
     }
@@ -202,10 +239,10 @@ internal class SpanModel(
             spanKind,
             startTimestamp,
             endTimestampImpl,
-            attrs.attributes,
-            eventsList.toList(),
+            attrs.attributes.frozenCopy(),
+            eventsList.map { it.toSnapshot() },
             droppedEventsCountImpl,
-            linksList.toList(),
+            linksList.map { it.toSnapshot() },
             droppedLinksCountImpl,
             resource,
             instrumentationScopeInfo,
@@ -241,34 +278,26 @@ internal class SpanModel(
         }
 
     override fun setBooleanAttribute(key: String, value: Boolean) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setBooleanAttribute(key, value)
-            }
+        mutate("Span.setBooleanAttribute failed") {
+            attrs.setBooleanAttribute(key, value)
         }
     }
 
     override fun setStringAttribute(key: String, value: String) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setStringAttribute(key, value)
-            }
+        mutate("Span.setStringAttribute failed") {
+            attrs.setStringAttribute(key, value)
         }
     }
 
     override fun setLongAttribute(key: String, value: Long) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setLongAttribute(key, value)
-            }
+        mutate("Span.setLongAttribute failed") {
+            attrs.setLongAttribute(key, value)
         }
     }
 
     override fun setDoubleAttribute(key: String, value: Double) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setDoubleAttribute(key, value)
-            }
+        mutate("Span.setDoubleAttribute failed") {
+            attrs.setDoubleAttribute(key, value)
         }
     }
 
@@ -276,10 +305,8 @@ internal class SpanModel(
         key: String,
         value: List<Boolean>
     ) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setBooleanListAttribute(key, value)
-            }
+        mutate("Span.setBooleanListAttribute failed") {
+            attrs.setBooleanListAttribute(key, value)
         }
     }
 
@@ -287,10 +314,8 @@ internal class SpanModel(
         key: String,
         value: List<String>
     ) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setStringListAttribute(key, value)
-            }
+        mutate("Span.setStringListAttribute failed") {
+            attrs.setStringListAttribute(key, value)
         }
     }
 
@@ -298,10 +323,8 @@ internal class SpanModel(
         key: String,
         value: List<Long>
     ) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setLongListAttribute(key, value)
-            }
+        mutate("Span.setLongListAttribute failed") {
+            attrs.setLongListAttribute(key, value)
         }
     }
 
@@ -309,26 +332,20 @@ internal class SpanModel(
         key: String,
         value: List<Double>
     ) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setDoubleListAttribute(key, value)
-            }
+        mutate("Span.setDoubleListAttribute failed") {
+            attrs.setDoubleListAttribute(key, value)
         }
     }
 
     override fun setByteArrayAttribute(key: String, value: ByteArray) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setByteArrayAttribute(key, value)
-            }
+        mutate("Span.setByteArrayAttribute failed") {
+            attrs.setByteArrayAttribute(key, value)
         }
     }
 
     override fun setAnyValueAttribute(key: String, value: AnyValue) {
-        lock.write {
-            if (isRecordingInternal()) {
-                attrs.setAnyValueAttribute(key, value)
-            }
+        mutate("Span.setAnyValueAttribute failed") {
+            attrs.setAnyValueAttribute(key, value)
         }
     }
 }

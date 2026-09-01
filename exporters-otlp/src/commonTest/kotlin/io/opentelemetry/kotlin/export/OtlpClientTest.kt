@@ -2,18 +2,22 @@ package io.opentelemetry.kotlin.export
 
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.client.engine.mock.toByteReadPacket
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.client.plugins.HttpTimeoutConfig.Companion.INFINITE_TIMEOUT_MS
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import io.ktor.util.GZipEncoder
 import io.ktor.util.toMap
 import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.toByteArray
+import io.opentelemetry.kotlin.error.FakeSdkErrorHandler
+import io.opentelemetry.kotlin.error.NoopSdkErrorHandler
+import io.opentelemetry.kotlin.logging.data.FakeLogRecordData
+import io.opentelemetry.kotlin.logging.data.LogRecordData
 import io.opentelemetry.kotlin.logging.export.toProtobufByteArray
-import io.opentelemetry.kotlin.logging.model.FakeReadableLogRecord
-import io.opentelemetry.kotlin.logging.model.ReadableLogRecord
 import io.opentelemetry.kotlin.tracing.data.FakeSpanData
 import io.opentelemetry.kotlin.tracing.data.SpanData
 import io.opentelemetry.kotlin.tracing.export.toProtobufByteArray
@@ -23,12 +27,10 @@ import io.opentelemetry.proto.collector.trace.v1.ExportTracePartialSuccess
 import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
-import kotlinx.io.readByteArray
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.time.Duration.Companion.milliseconds
@@ -36,25 +38,31 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class OtlpClientTest {
 
     private val requestTimeoutMs = 250L
-    private val logRecords = listOf(FakeReadableLogRecord())
+    private val logRecords = listOf(FakeLogRecordData())
     private val spans = listOf(FakeSpanData())
     private val baseUrl = "http://localhost:1234"
     private val expectedUserAgent = "OTel-OTLP-Exporter-Kotlin/${BuildKonfig.VERSION}"
 
     private lateinit var client: OtlpClient
+    private var errorHandler: FakeSdkErrorHandler = FakeSdkErrorHandler()
     private lateinit var server: MockEngine
     private lateinit var mockResponseStatus: HttpStatusCode
     private var mockResponseHeaders: Headers = Headers.Empty
     private var mockResponseBody: ByteArray = ByteArray(0)
     private var serverDelayMs: Long = 0
     private var serverThrows: Boolean = false
+    private var compressedRequestBody: ByteArray = ByteArray(0)
 
     @BeforeTest
     fun setUp() {
+        errorHandler = FakeSdkErrorHandler()
         server = MockEngine {
             if (serverThrows) {
                 error("network unreachable")
             }
+            // gzip compression is lazy and tied to the request context, so capture the body here;
+            // reading it later fails after the request completes.
+            compressedRequestBody = it.body.toByteArray()
             if (serverDelayMs > 0) {
                 delay(serverDelayMs.milliseconds)
             }
@@ -65,7 +73,7 @@ internal class OtlpClientTest {
             )
         }
         val httpClient = createDefaultHttpClient(INFINITE_TIMEOUT_MS, server)
-        client = OtlpClient(baseUrl, httpClient = httpClient)
+        client = OtlpClient(baseUrl, httpClient = httpClient, sdkErrorHandler = errorHandler)
     }
 
     @Test
@@ -81,8 +89,8 @@ internal class OtlpClientTest {
     fun testExportMultiLogSuccess() = runTest {
         sendAndAssertLogRequest(
             telemetry = listOf(
-                FakeReadableLogRecord(body = "a"),
-                FakeReadableLogRecord(body = "b")
+                FakeLogRecordData(body = "a"),
+                FakeLogRecordData(body = "b")
             ),
             mockResponseStatus = HttpStatusCode.OK,
             expectedResponse = OtlpResponse.Success,
@@ -173,6 +181,8 @@ internal class OtlpClientTest {
         serverThrows = true
         val response = client.exportLogs(logRecords)
         assertIs<OtlpResponse.Unknown>(response)
+        assertEquals(1, errorHandler.userCodeErrors.size)
+        assertEquals("OTLP export failed", errorHandler.userCodeErrors.single().message)
     }
 
     @Test
@@ -180,6 +190,8 @@ internal class OtlpClientTest {
         serverThrows = true
         val response = client.exportTraces(spans)
         assertIs<OtlpResponse.Unknown>(response)
+        assertEquals(1, errorHandler.userCodeErrors.size)
+        assertEquals("OTLP export failed", errorHandler.userCodeErrors.single().message)
     }
 
     @Test
@@ -281,7 +293,9 @@ internal class OtlpClientTest {
         mockResponseStatus = HttpStatusCode.OK
         mockResponseBody = logResponseBody(rejected = 2L, msg = "2 log records rejected")
         val response = client.exportLogs(logRecords)
-        assertFalse(response is OtlpResponse.Success)
+        assertIs<OtlpResponse.PartialSuccess>(response)
+        assertEquals(2L, response.rejectedCount)
+        assertEquals("2 log records rejected", response.errorMessage)
     }
 
     @Test
@@ -289,7 +303,39 @@ internal class OtlpClientTest {
         mockResponseStatus = HttpStatusCode.OK
         mockResponseBody = traceResponseBody(rejected = 3L, msg = "3 spans rejected")
         val response = client.exportTraces(spans)
-        assertFalse(response is OtlpResponse.Success)
+        assertIs<OtlpResponse.PartialSuccess>(response)
+        assertEquals(3L, response.rejectedCount)
+        assertEquals("3 spans rejected", response.errorMessage)
+    }
+
+    @Test
+    fun testExportLogUnknownHttpStatus() = runTest {
+        mockResponseStatus = HttpStatusCode.MovedPermanently
+        val response = client.exportLogs(logRecords)
+        assertIs<OtlpResponse.Unknown>(response)
+    }
+
+    @Test
+    fun testExportTraceUnknownHttpStatus() = runTest {
+        mockResponseStatus = HttpStatusCode.MovedPermanently
+        val response = client.exportTraces(spans)
+        assertIs<OtlpResponse.Unknown>(response)
+    }
+
+    @Test
+    fun testExportLogBadGatewayIsRetryable() = runTest {
+        mockResponseStatus = HttpStatusCode.BadGateway
+        val response = client.exportLogs(logRecords)
+        assertIs<OtlpResponse.RetryableError>(response)
+        assertEquals(502, response.statusCode)
+    }
+
+    @Test
+    fun testExportTraceBadGatewayIsRetryable() = runTest {
+        mockResponseStatus = HttpStatusCode.BadGateway
+        val response = client.exportTraces(spans)
+        assertIs<OtlpResponse.RetryableError>(response)
+        assertEquals(502, response.statusCode)
     }
 
     @Test
@@ -326,7 +372,7 @@ internal class OtlpClientTest {
         )
 
     private suspend fun sendAndAssertLogRequest(
-        telemetry: List<ReadableLogRecord>,
+        telemetry: List<LogRecordData>,
         mockResponseStatus: HttpStatusCode,
         expectedResponse: OtlpResponse
     ) {
@@ -376,15 +422,17 @@ internal class OtlpClientTest {
         val contentType = checkNotNull(request.body.contentType)
         assertEquals("application/x-protobuf", contentType.toString())
 
-        val headers = request.headers.toMap().mapValues { it.value.joinToString() }
-        assertEquals("gzip,deflate", headers["Accept-Encoding"])
+        assertEquals("gzip,deflate", request.headers[HttpHeaders.AcceptEncoding])
 
-        val bytes = request.body.toByteReadPacket().readByteArray()
-        return bytes
+        assertEquals("gzip", request.body.headers[HttpHeaders.ContentEncoding])
+
+        val uncompressedBytes = GZipEncoder.decode(ByteReadChannel(compressedRequestBody))
+            .toByteArray()
+        return uncompressedBytes
     }
 
     private fun useRequestTimeout() {
         val httpClient = createDefaultHttpClient(requestTimeoutMs, server)
-        client = OtlpClient(baseUrl, httpClient = httpClient)
+        client = OtlpClient(baseUrl, httpClient = httpClient, sdkErrorHandler = NoopSdkErrorHandler)
     }
 }

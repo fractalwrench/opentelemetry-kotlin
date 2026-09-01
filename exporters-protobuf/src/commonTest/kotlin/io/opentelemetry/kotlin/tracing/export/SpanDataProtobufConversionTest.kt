@@ -8,7 +8,6 @@ import io.opentelemetry.kotlin.resource.FakeResource
 import io.opentelemetry.kotlin.tracing.FakeSpanContext
 import io.opentelemetry.kotlin.tracing.FakeTraceFlags
 import io.opentelemetry.kotlin.tracing.FakeTraceState
-import io.opentelemetry.kotlin.tracing.SpanContext
 import io.opentelemetry.kotlin.tracing.SpanKind
 import io.opentelemetry.kotlin.tracing.data.FakeSpanEventData
 import io.opentelemetry.kotlin.tracing.data.FakeSpanLinkData
@@ -17,6 +16,7 @@ import io.opentelemetry.kotlin.tracing.data.FakeSpanData
 import io.opentelemetry.kotlin.tracing.data.SpanLinkData
 import io.opentelemetry.kotlin.tracing.StatusData
 import io.opentelemetry.proto.trace.v1.Span
+import io.opentelemetry.proto.trace.v1.Status
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -57,7 +57,7 @@ class SpanDataProtobufConversionTest {
         assertEquals(obj.spanContext.spanId, protobuf.span_id.toByteArray().toHexString())
         assertEquals(obj.startTimestamp, protobuf.start_time_unix_nano)
         assertEquals(obj.endTimestamp, protobuf.end_time_unix_nano)
-        assertEquals(obj.status.statusCode.ordinal, protobuf.status?.code?.ordinal)
+        assertEquals(Status.StatusCode.STATUS_CODE_ERROR, protobuf.status?.code)
         assertEquals(obj.status.description, protobuf.status?.message)
         assertAttributesMatch(obj.attributes, protobuf.attributes)
         assertEventsMatch(obj.events, protobuf.events)
@@ -202,6 +202,19 @@ class SpanDataProtobufConversionTest {
         }
     }
 
+    @Test
+    fun testStatusCodeMapping() {
+        val statusMappings = mapOf(
+            StatusData.Unset to Status.StatusCode.STATUS_CODE_UNSET,
+            StatusData.Ok to Status.StatusCode.STATUS_CODE_OK,
+            StatusData.Error("Whoops") to Status.StatusCode.STATUS_CODE_ERROR,
+        )
+        statusMappings.forEach { (status, protoCode) ->
+            val protobuf = FakeSpanData(status = status).toProtobuf()
+            assertEquals(protoCode, protobuf.status?.code)
+        }
+    }
+
     private fun assertEventsMatch(
         events: List<SpanEventData>, eventsList: List<Span.Event>
     ) {
@@ -222,12 +235,9 @@ class SpanDataProtobufConversionTest {
             val proto = linksList[index]
             assertEquals(link.spanContext.traceId, proto.trace_id.toByteArray().toHexString())
             assertEquals(link.spanContext.spanId, proto.span_id.toByteArray().toHexString())
-            assertEquals(expectedTraceState(link.spanContext), proto.trace_state)
+            assertEquals("foo=bar", proto.trace_state)
             assertEquals(expectedFlags, proto.flags)
             assertAttributesMatch(link.attributes, proto.attributes)
         }
     }
-
-    private fun expectedTraceState(spanContext: SpanContext) =
-        spanContext.traceState.asMap().entries.joinToString(",") { "${it.key}=${it.value}" }
 }

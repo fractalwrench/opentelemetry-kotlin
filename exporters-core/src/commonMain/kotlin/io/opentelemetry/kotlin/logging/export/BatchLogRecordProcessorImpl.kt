@@ -8,10 +8,10 @@ import io.opentelemetry.kotlin.export.BatchTelemetryDefaults
 import io.opentelemetry.kotlin.export.BatchTelemetryProcessor
 import io.opentelemetry.kotlin.export.MutableShutdownState
 import io.opentelemetry.kotlin.export.OperationResultCode
+import io.opentelemetry.kotlin.ioDispatcher
 import io.opentelemetry.kotlin.logging.SeverityNumber
 import io.opentelemetry.kotlin.logging.model.ReadWriteLogRecord
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 
 internal class BatchLogRecordProcessorImpl(
     private val exporter: LogRecordExporter,
@@ -20,7 +20,7 @@ internal class BatchLogRecordProcessorImpl(
     exportTimeoutMs: Long,
     maxExportBatchSize: Int,
     sdkErrorHandler: SdkErrorHandler,
-    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    dispatcher: CoroutineDispatcher = ioDispatcher,
 ) : LogRecordProcessor {
 
     private val shutdownState: MutableShutdownState = MutableShutdownState()
@@ -40,7 +40,9 @@ internal class BatchLogRecordProcessorImpl(
     override fun onEmit(
         log: ReadWriteLogRecord,
         context: Context
-    ) = shutdownState.execute { processor.processTelemetry(log) }
+    ) = shutdownState.execute {
+        processor.processTelemetry(log.toLogRecordData())
+    }
 
     override fun enabled(
         context: Context,
