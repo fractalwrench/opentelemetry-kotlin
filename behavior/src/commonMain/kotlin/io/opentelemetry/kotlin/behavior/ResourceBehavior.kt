@@ -3,7 +3,7 @@ package io.opentelemetry.kotlin.behavior
 import io.opentelemetry.kotlin.ExperimentalApi
 
 /**
- * The entity producing telemetry.
+ * The service producing telemetry, which on a mobile platform is the app itself.
  *
  * https://opentelemetry.io/docs/specs/otel/resource/sdk/
  */
@@ -22,7 +22,7 @@ data class ResourceBehavior(
     val schemaUrl: String? = null,
 
     /**
-     * Attributes describing the entity producing telemetry.
+     * Attributes describing the service producing telemetry.
      */
     val attributes: Map<String, Any>? = null,
 ) : Behavior<ResourceBehavior> {
