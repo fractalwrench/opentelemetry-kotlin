@@ -1,3 +1,9 @@
+public final class io/opentelemetry/kotlin/propagation/PropagatorEntrypointsKt {
+	public static final fun createCompositePropagator ([Lio/opentelemetry/kotlin/propagation/TextMapPropagator;)Lio/opentelemetry/kotlin/propagation/TextMapPropagator;
+	public static final fun createW3CBaggagePropagator ()Lio/opentelemetry/kotlin/propagation/TextMapPropagator;
+	public static final fun createW3CTraceContextPropagator ()Lio/opentelemetry/kotlin/propagation/TextMapPropagator;
+}
+
 public abstract interface class io/opentelemetry/kotlin/propagation/Propagators {
 	public abstract fun none ()Lio/opentelemetry/kotlin/propagation/TextMapPropagator;
 }
