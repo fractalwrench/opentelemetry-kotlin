@@ -6,9 +6,11 @@ import io.opentelemetry.kotlin.aliases.OtelJavaBaggage
 import io.opentelemetry.kotlin.aliases.OtelJavaContext
 import io.opentelemetry.kotlin.aliases.OtelJavaTextMapGetter
 import io.opentelemetry.kotlin.aliases.OtelJavaTextMapPropagator
+import io.opentelemetry.kotlin.baggage.createBaggage
 import io.opentelemetry.kotlin.context.ContextAdapter
-import io.opentelemetry.kotlin.context.FakeContext
+import io.opentelemetry.kotlin.factory.ContextFactoryImpl
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -18,6 +20,7 @@ import org.junit.Test
 internal class TextMapPropagatorAdapterTest {
 
     private val impl: OtelJavaTextMapPropagator = W3CBaggagePropagator.getInstance()
+    private val kotlinContextFactory = ContextFactoryImpl()
 
     @Test
     fun `fields delegates to wrapped Java propagator`() {
@@ -76,35 +79,23 @@ internal class TextMapPropagatorAdapterTest {
     }
 
     @Test
-    fun `inject is a no-op when context is not a ContextAdapter`() {
+    fun `inject writes baggage from a Kotlin-native context`() {
+        val ctx = kotlinContextFactory.root().storeBaggage(createBaggage { put("k", "v") })
         val carrier = mutableMapOf<String, String>()
-        val throwingSetter = TextMapSetter<MutableMap<String, String>> { _, _, _ ->
-            error("setter must not be invoked when context is not a ContextAdapter")
-        }
 
-        TextMapPropagatorAdapter(impl).inject(FakeContext(), carrier, throwingSetter)
+        TextMapPropagatorAdapter(impl).inject(ctx, carrier, MapSetter)
 
-        assertTrue(carrier.isEmpty())
+        assertEquals("k=v", carrier["baggage"])
     }
 
     @Test
-    fun `extract returns input context unchanged when context is not a ContextAdapter`() {
-        val input = FakeContext()
-        val throwingGetter = object : TextMapGetter<Map<String, String>> {
-            val errMsg = "getter must not be invoked when context is not a ContextAdapter"
+    fun `extract into a Kotlin-native context preserves its type`() {
+        val input = kotlinContextFactory.root()
 
-            override fun keys(carrier: Map<String, String>): Collection<String> = error(errMsg)
-            override fun get(carrier: Map<String, String>?, key: String): String = error(errMsg)
-            override fun getAll(carrier: Map<String, String>?, key: String): List<String> = error(errMsg)
-        }
+        val extracted = TextMapPropagatorAdapter(impl).extract(input, mapOf("baggage" to "k=v"), MapGetter)
 
-        val extracted = TextMapPropagatorAdapter(impl).extract(
-            input,
-            mapOf("baggage" to "k=v"),
-            throwingGetter
-        )
-
-        assertSame(input, extracted)
+        assertFalse(extracted is ContextAdapter)
+        assertEquals("v", extracted.extractBaggage().getValue("k"))
     }
 
     @Test
