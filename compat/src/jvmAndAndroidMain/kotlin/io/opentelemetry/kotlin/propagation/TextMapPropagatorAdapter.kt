@@ -16,13 +16,13 @@ internal class TextMapPropagatorAdapter(
 
     override fun fields(): Collection<String> = safely(emptyList()) { impl.fields() }
 
-    override fun <T> inject(context: Context, carrier: T?, setter: TextMapSetter<T>) {
+    override fun <T> inject(context: Context, carrier: T, setter: TextMapSetter<T>) {
         val javaCtx = context.toOtelJavaContext()
         val javaSetter = setter.toOtelJavaTextMapSetter() ?: return
         safely { impl.inject(javaCtx, carrier, javaSetter) }
     }
 
-    override fun <T> extract(context: Context, carrier: T?, getter: TextMapGetter<T>): Context {
+    override fun <T> extract(context: Context, carrier: T, getter: TextMapGetter<T>): Context {
         val javaCtx = context.toOtelJavaContext()
         val javaGetter = getter.toOtelJavaTextMapGetter() ?: return context
         return safely(context) { impl.extract(javaCtx, carrier, javaGetter).toOtelKotlinContext() }

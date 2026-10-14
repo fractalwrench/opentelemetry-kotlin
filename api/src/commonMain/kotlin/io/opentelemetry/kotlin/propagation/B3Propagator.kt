@@ -29,18 +29,18 @@ internal class B3Propagator private constructor(
         B3Format.MULTI -> MULTI_FIELDS
     }
 
-    override fun <T> inject(context: Context, carrier: T?, setter: TextMapSetter<T>) {
+    override fun <T> inject(context: Context, carrier: T, setter: TextMapSetter<T>) {
         safely { injectUnguarded(context, carrier, setter) }
     }
 
-    override fun <T> extract(context: Context, carrier: T?, getter: TextMapGetter<T>): Context =
+    override fun <T> extract(context: Context, carrier: T, getter: TextMapGetter<T>): Context =
         safely(context) {
             extractSingle(context, carrier, getter)
                 ?: extractMulti(context, carrier, getter)
                 ?: context
         }
 
-    private fun <T> injectUnguarded(context: Context, carrier: T?, setter: TextMapSetter<T>) {
+    private fun <T> injectUnguarded(context: Context, carrier: T, setter: TextMapSetter<T>) {
         val spanContext = context.extractSpan().spanContext
         if (!spanContext.isValid) { return }
         val debug = context.isB3Debug()
@@ -53,7 +53,7 @@ internal class B3Propagator private constructor(
     private fun <T> injectSingle(
         spanContext: SpanContext,
         debug: Boolean,
-        carrier: T?,
+        carrier: T,
         setter: TextMapSetter<T>,
     ) {
         val flag = when {
@@ -74,7 +74,7 @@ internal class B3Propagator private constructor(
     private fun <T> injectMulti(
         spanContext: SpanContext,
         debug: Boolean,
-        carrier: T?,
+        carrier: T,
         setter: TextMapSetter<T>,
     ) {
         setter.set(carrier, TRACE_ID_HEADER, spanContext.traceId)
@@ -88,7 +88,7 @@ internal class B3Propagator private constructor(
         }
     }
 
-    private fun <T> extractSingle(context: Context, carrier: T?, getter: TextMapGetter<T>): Context? {
+    private fun <T> extractSingle(context: Context, carrier: T, getter: TextMapGetter<T>): Context? {
         val header = getter.get(carrier, COMBINED_HEADER) ?: return null
         val parts = header.split(DELIMITER)
         if (parts.size !in 2..4) {
@@ -107,7 +107,7 @@ internal class B3Propagator private constructor(
         }
     }
 
-    private fun <T> extractMulti(context: Context, carrier: T?, getter: TextMapGetter<T>): Context? {
+    private fun <T> extractMulti(context: Context, carrier: T, getter: TextMapGetter<T>): Context? {
         val rawTraceId = getter.get(carrier, TRACE_ID_HEADER)
         val rawSpanId = getter.get(carrier, SPAN_ID_HEADER) ?: return null
         val traceId = normalizeTraceId(rawTraceId) ?: return null
