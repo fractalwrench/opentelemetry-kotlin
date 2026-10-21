@@ -70,7 +70,10 @@ internal class CompatLoggerProviderConfig(
     }
 
     internal fun applyResolvedProcessor(behavior: LogRecordProcessorBehavior?) {
-        if (exportConfigured || behavior?.console == null) {
+        val simple = behavior?.simple
+        val batch = behavior?.batch
+        val console = batch?.exporter?.console ?: simple?.exporter?.console
+        if (exportConfigured || console == null) {
             return
         }
         exportConfigured = true

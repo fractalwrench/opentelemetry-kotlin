@@ -39,15 +39,6 @@ internal class LoggerProviderConfigImplTest {
     }
 
     @Test
-    fun testConsoleBehaviorInstallsProcessor() {
-        val cfg = LoggerProviderConfigImpl(clock, NoopSdkErrorHandler).generateLoggingConfig(
-            base,
-            LogRecordProcessorBehavior(console = ConsoleExporterBehavior()),
-        )
-        assertNotNull(cfg.processor)
-    }
-
-    @Test
     fun testDslExportTakesPrecedenceOverConsoleBehavior() {
         val dslProcessor = FakeLogRecordProcessor()
         val cfg = LoggerProviderConfigImpl(clock, NoopSdkErrorHandler).apply {

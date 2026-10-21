@@ -65,11 +65,13 @@ internal class LoggerProviderConfigImpl(
 
     fun toBehavior(): LoggerProviderBehavior =
         LoggerProviderBehavior(
-            logLimits = logLimits.toBehavior()
+            logLimits = logLimits.toBehavior(),
         )
 
     private fun processorFromBehavior(processorBehavior: LogRecordProcessorBehavior?): LogRecordProcessor? {
-        if (processorBehavior?.console == null) {
+        val simple = processorBehavior?.simple
+        val batch = processorBehavior?.batch
+        if (simple?.exporter?.console == null && batch?.exporter?.console == null) {
             return null
         }
         return LogExportConfigDslImpl(clock, sdkErrorHandler).run {

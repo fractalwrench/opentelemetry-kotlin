@@ -32,9 +32,9 @@ protobufKotlin = "4.36.2"
 protobufPlugin = "0.10.0"
 wire = "7.1.0"
 buildKonfig = "0.23.0"
-composeMultiplatform = "1.12.1"
+composeMultiplatform = "1.12.2"
 androidxActivityCompose = "1.13.0"
-kotest = "6.2.5"
+kotest = "6.2.6"
 kotlinpoet = "2.4.0"
 yamlkt = "0.13.0"
 
@@ -70,7 +70,6 @@ opentelemetry-api = { group = "io.opentelemetry", name = "opentelemetry-api"}
 opentelemetry-sdk = { group = "io.opentelemetry", name = "opentelemetry-sdk"}
 opentelemetry-exporter-logging = { group = "io.opentelemetry", name = "opentelemetry-exporter-logging"}
 opentelemetry-sdk-extension-incubator = { group = "io.opentelemetry", name = "opentelemetry-sdk-extension-incubator"}
-opentelemetry-extension-trace-propagators = { group = "io.opentelemetry", name = "opentelemetry-extension-trace-propagators" }
 kotlin-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerialization" }
 mavenPublish = { module = "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin", version.ref = "mavenPublish" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }

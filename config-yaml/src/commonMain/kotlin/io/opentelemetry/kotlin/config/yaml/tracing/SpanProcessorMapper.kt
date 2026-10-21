@@ -1,9 +1,6 @@
 package io.opentelemetry.kotlin.config.yaml.tracing
 
 import io.opentelemetry.kotlin.ExperimentalApi
-import io.opentelemetry.kotlin.behavior.BatchSpanProcessorBehavior
-import io.opentelemetry.kotlin.behavior.ConsoleExporterBehavior
-import io.opentelemetry.kotlin.behavior.SimpleSpanProcessorBehavior
 import io.opentelemetry.kotlin.behavior.SpanProcessorBehavior
 import io.opentelemetry.kotlin.config.schema.model.SpanProcessor
 
@@ -14,32 +11,13 @@ import io.opentelemetry.kotlin.config.schema.model.SpanProcessor
 fun List<SpanProcessor>.toBehavior(): SpanProcessorBehavior? {
     // TODO: Add support to multiple exporters being in use simultaneously once we have the SpanProcessor
     //  fully implemented.
-    for (processor in this) {
-        val simple = processor.simple?.let { SimpleSpanProcessorBehavior() }
-        val batch = processor.batch?.let {
-            BatchSpanProcessorBehavior(
-                scheduleDelay = it.scheduleDelay?.takeIf { value -> value >= 0 },
-                exportTimeout = it.exportTimeout?.takeIf { value -> value >= 0 },
-                maxQueueSize = it.maxQueueSize?.takeIf { value -> value in 1..Int.MAX_VALUE.toLong() }?.toInt(),
-                maxExportBatchSize = it.maxExportBatchSize
-                    ?.takeIf { value -> value in 1..Int.MAX_VALUE.toLong() }?.toInt(),
+    for ((batch, simple) in this) {
+        when {
+            batch != null -> return SpanProcessorBehavior(
+                batch = batch.toBehavior()
             )
-        }
-        val consoleExporter = processor.simple?.exporter?.console ?: processor.batch?.exporter?.console
-        if (consoleExporter != null) {
-            return SpanProcessorBehavior(
-                console = ConsoleExporterBehavior(),
-                simple = simple,
-                batch = batch,
-            )
-        }
-
-        val httpExporter = processor.simple?.exporter?.otlpHttp ?: processor.batch?.exporter?.otlpHttp
-        if (httpExporter != null) {
-            return SpanProcessorBehavior(
-                http = httpExporter.toBehavior(),
-                simple = simple,
-                batch = batch,
+            simple != null -> return SpanProcessorBehavior(
+                simple = simple.toBehavior()
             )
         }
     }

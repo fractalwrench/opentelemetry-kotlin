@@ -89,16 +89,17 @@ internal class TracerProviderConfigImpl(
             spanLimits = spanLimits.toBehavior()
         )
 
-    private fun processorFromBehavior(processorBehavior: SpanProcessorBehavior?): SpanProcessor? {
-        if (processorBehavior?.console == null) {
+    private fun processorFromBehavior(behavior: SpanProcessorBehavior?): SpanProcessor? {
+        val simple = behavior?.simple
+        val batch = behavior?.batch
+        val console = behavior?.console ?: batch?.exporter?.console ?: simple?.exporter?.console
+        if (console == null) {
             return null
         }
         return TraceExportConfigDslImpl(clock, sdkErrorHandler).run {
             val exporter = stdoutSpanExporter()
-            val batch = processorBehavior.batch
-            if (batch == null) {
-                simpleSpanProcessor(exporter)
-            } else {
+            // An explicit simple processor wins when batch settings were merged from a lower layer.
+            if (batch != null && simple == null) {
                 batchSpanProcessor(
                     exporter = exporter,
                     scheduleDelayMs = batch.scheduleDelay ?: BatchTelemetryDefaults.SPAN_SCHEDULE_DELAY_MS,
@@ -106,6 +107,8 @@ internal class TracerProviderConfigImpl(
                     maxQueueSize = batch.maxQueueSize ?: BatchTelemetryDefaults.MAX_QUEUE_SIZE,
                     maxExportBatchSize = batch.maxExportBatchSize ?: BatchTelemetryDefaults.MAX_EXPORT_BATCH_SIZE,
                 )
+            } else {
+                simpleSpanProcessor(exporter)
             }
         }
     }

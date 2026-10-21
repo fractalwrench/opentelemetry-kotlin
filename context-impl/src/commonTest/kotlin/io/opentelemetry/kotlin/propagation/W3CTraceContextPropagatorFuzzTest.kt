@@ -7,7 +7,6 @@ import io.kotest.property.arbitrary.filter
 import io.kotest.property.checkAll
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.factory.ContextFactoryImpl
-import io.opentelemetry.kotlin.factory.SpanFactoryImpl
 import io.opentelemetry.kotlin.tracing.createSpanContext
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -16,7 +15,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Property-based fuzz tests for [W3CTraceContextPropagator] using Kotest's
+ * Property-based fuzz tests for [createW3CTraceContextPropagator] using Kotest's
  * [io.kotest.property.Arb] generators with [checkAll]. Runs across every KMP target
  * (JVM, Android host, iOS, JS). Kotest's seed reporting + automatic shrinking surface
  * a minimal failing input on regression.
@@ -24,10 +23,9 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalApi::class)
 internal class W3CTraceContextPropagatorFuzzTest {
 
-    private val spanFactory = SpanFactoryImpl()
-    private val contextFactory = ContextFactoryImpl(spanFactory)
+    private val contextFactory = ContextFactoryImpl()
 
-    private val propagator = W3CTraceContextPropagator()
+    private val propagator = createW3CTraceContextPropagator()
 
     private val headerArb = arbitrary { rs ->
         val len = rs.random.nextInt(0, MAX_HEADER_LEN + 1)
@@ -116,7 +114,7 @@ internal class W3CTraceContextPropagatorFuzzTest {
                     entries.forEach { (k, v) -> put(k, v) }
                 }
             }
-            val context = contextFactory.root().storeSpan(spanFactory.fromSpanContext(original))
+            val context = contextFactory.root().storeSpanContext(original)
 
             val carrier = mutableMapOf<String, String>()
             propagator.inject(context, carrier, FakeTextMapSetter)

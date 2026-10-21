@@ -1,8 +1,8 @@
 package io.opentelemetry.kotlin.propagation
 
 import io.opentelemetry.kotlin.ExperimentalApi
+import io.opentelemetry.kotlin.context.Context
 import io.opentelemetry.kotlin.factory.ContextFactoryImpl
-import io.opentelemetry.kotlin.factory.SpanFactoryImpl
 import io.opentelemetry.kotlin.init.B3Format
 import io.opentelemetry.kotlin.tracing.createSpanContext
 import kotlin.test.Test
@@ -15,16 +15,24 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalApi::class)
 internal class B3PropagatorTest {
 
-    private val spanFactory = SpanFactoryImpl()
-    private val contextFactory = ContextFactoryImpl(spanFactory)
+    private val contextFactory = ContextFactoryImpl()
 
-    private val singlePropagator =
-        B3Propagator(B3Format.SINGLE)
-    private val multiPropagator =
-        B3Propagator(B3Format.MULTI)
+    private val singlePropagator = createB3Propagator(B3Format.SINGLE)
+    private val multiPropagator = createB3Propagator(B3Format.MULTI)
 
     private val traceId = "0af7651916cd43dd8448eb211c80319c"
     private val spanId = "b7ad6b7169203331"
+
+    @Test
+    fun `createB3Propagator defaults to single format`() {
+        assertSame(singlePropagator, createB3Propagator())
+    }
+
+    @Test
+    fun `createB3Propagator returns a shared instance per format`() {
+        assertSame(singlePropagator, createB3Propagator(B3Format.SINGLE))
+        assertSame(multiPropagator, createB3Propagator(B3Format.MULTI))
+    }
 
     @Test
     fun `single format fields returns only b3`() {
@@ -51,10 +59,7 @@ internal class B3PropagatorTest {
 
     @Test
     fun `inject single writes d flag when debug context is set`() {
-        val spanContext = createSpanContext(traceId, spanId) { isSampled = true }
-        val ctx = contextFactory.root()
-            .storeSpan(spanFactory.fromSpanContext(spanContext))
-            .set(B3Propagator.DEBUG_CONTEXT_KEY, true)
+        val ctx = debugContext()
         val carrier = mutableMapOf<String, String>()
         singlePropagator.inject(ctx, carrier, FakeTextMapSetter)
         assertEquals("$traceId-$spanId-d", carrier["b3"])
@@ -82,10 +87,7 @@ internal class B3PropagatorTest {
 
     @Test
     fun `inject multi writes X-B3-Flags 1 and sampled 1 when debug`() {
-        val spanContext = createSpanContext(traceId, spanId) { isSampled = true }
-        val ctx = contextFactory.root()
-            .storeSpan(spanFactory.fromSpanContext(spanContext))
-            .set(B3Propagator.DEBUG_CONTEXT_KEY, true)
+        val ctx = debugContext()
         val carrier = mutableMapOf<String, String>()
         multiPropagator.inject(ctx, carrier, FakeTextMapSetter)
         assertEquals("1", carrier["X-B3-Flags"])
@@ -119,7 +121,7 @@ internal class B3PropagatorTest {
     fun `extract single sets debug context key and sampled when flag is d`() {
         val ctx = singlePropagator.extract(contextFactory.root(), mapOf("b3" to "$traceId-$spanId-d"), FakeTextMapGetter)
         assertTrue(ctx.extractSpan().spanContext.traceFlags.isSampled)
-        assertEquals(true, ctx.get(B3Propagator.DEBUG_CONTEXT_KEY))
+        assertTrue(ctx.isB3Debug())
     }
 
     @Test
@@ -203,7 +205,7 @@ internal class B3PropagatorTest {
         val carrier = mapOf("X-B3-TraceId" to traceId, "X-B3-SpanId" to spanId, "X-B3-Flags" to "1")
         val ctx = multiPropagator.extract(contextFactory.root(), carrier, FakeTextMapGetter)
         assertTrue(ctx.extractSpan().spanContext.traceFlags.isSampled)
-        assertEquals(true, ctx.get(B3Propagator.DEBUG_CONTEXT_KEY))
+        assertTrue(ctx.isB3Debug())
     }
 
     @Test
@@ -309,39 +311,42 @@ internal class B3PropagatorTest {
 
     @Test
     fun `debug flag survives single inject then extract`() {
-        val spanContext = createSpanContext(traceId, spanId) { isSampled = true }
-        val inCtx = contextFactory.root()
-            .storeSpan(spanFactory.fromSpanContext(spanContext))
-            .set(B3Propagator.DEBUG_CONTEXT_KEY, true)
+        val inCtx = debugContext()
         val carrier = mutableMapOf<String, String>()
         singlePropagator.inject(inCtx, carrier, FakeTextMapSetter)
         val outCtx = singlePropagator.extract(contextFactory.root(), carrier, FakeTextMapGetter)
-        assertEquals(true, outCtx.get(B3Propagator.DEBUG_CONTEXT_KEY))
+        assertTrue(outCtx.isB3Debug())
         assertTrue(outCtx.extractSpan().spanContext.traceFlags.isSampled)
     }
 
     @Test
     fun `debug flag survives multi inject then extract`() {
-        val spanContext = createSpanContext(traceId, spanId) { isSampled = true }
-        val inCtx = contextFactory.root()
-            .storeSpan(spanFactory.fromSpanContext(spanContext))
-            .set(B3Propagator.DEBUG_CONTEXT_KEY, true)
+        val inCtx = debugContext()
         val carrier = mutableMapOf<String, String>()
         multiPropagator.inject(inCtx, carrier, FakeTextMapSetter)
         val outCtx = multiPropagator.extract(contextFactory.root(), carrier, FakeTextMapGetter)
-        assertEquals(true, outCtx.get(B3Propagator.DEBUG_CONTEXT_KEY))
+        assertTrue(outCtx.isB3Debug())
         assertTrue(outCtx.extractSpan().spanContext.traceFlags.isSampled)
     }
 
     private fun injectSingle(sampled: Boolean): MutableMap<String, String> {
         val spanContext = createSpanContext(traceId, spanId) { isSampled = sampled }
-        val ctx = contextFactory.root().storeSpan(spanFactory.fromSpanContext(spanContext))
+        val ctx = contextFactory.root().storeSpanContext(spanContext)
         return mutableMapOf<String, String>().also { singlePropagator.inject(ctx, it, FakeTextMapSetter) }
     }
 
     private fun injectMulti(sampled: Boolean): MutableMap<String, String> {
         val spanContext = createSpanContext(traceId, spanId) { isSampled = sampled }
-        val ctx = contextFactory.root().storeSpan(spanFactory.fromSpanContext(spanContext))
+        val ctx = contextFactory.root().storeSpanContext(spanContext)
         return mutableMapOf<String, String>().also { multiPropagator.inject(ctx, it, FakeTextMapSetter) }
+    }
+
+    private fun debugContext(): Context =
+        singlePropagator.extract(contextFactory.root(), mapOf("b3" to "$traceId-$spanId-d"), FakeTextMapGetter)
+
+    private fun Context.isB3Debug(): Boolean {
+        val carrier = mutableMapOf<String, String>()
+        singlePropagator.inject(this, carrier, FakeTextMapSetter)
+        return carrier["b3"]?.endsWith("-d") == true
     }
 }
