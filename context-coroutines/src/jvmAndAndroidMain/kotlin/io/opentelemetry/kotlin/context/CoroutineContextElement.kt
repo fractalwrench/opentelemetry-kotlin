@@ -11,9 +11,10 @@ import kotlin.coroutines.CoroutineContext
  * be restored. This makes the current context follow the coroutine across suspension, thread hops,
  * and into child coroutines.
  *
- * The SDK must be configured with thread-local current-context storage (the `THREAD_LOCAL` storage
- * mode) for this to behave correctly. You should also avoid setting the current context in
- * any other way if you use this method.
+ * The installed [CurrentContextStorage] must be thread-local for this to behave correctly, e.g.
+ * `context { storage = createThreadLocalCurrentContextStorage() }` from `context-threadlocal`, or
+ * opentelemetry-java's storage via the compat module. You should also avoid setting the current
+ * context in any other way if you use this method.
  *
  * This API is only available on JVM/Android as it's backed by
  * `kotlinx.coroutines.ThreadContextElement`, which itself is JVM-only.

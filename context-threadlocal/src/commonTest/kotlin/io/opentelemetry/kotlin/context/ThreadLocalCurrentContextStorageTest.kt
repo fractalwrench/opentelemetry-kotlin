@@ -1,57 +1,40 @@
 package io.opentelemetry.kotlin.context
 
-import kotlin.test.BeforeTest
+import io.opentelemetry.kotlin.ExperimentalApi
 import kotlin.test.Test
-import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalApi::class)
 internal class ThreadLocalCurrentContextStorageTest {
 
-    private lateinit var root: Context
-    private lateinit var storage: CurrentContextStorage
+    private val key = createContextKey<String>("key")
 
-    @BeforeTest
-    fun setUp() {
-        root = FakeContext()
-        storage = ThreadLocalCurrentContextStorage { root }
+    @Test
+    fun testEmptyStorageReturnsRoot() {
+        assertSame(rootContext(), createThreadLocalCurrentContextStorage().current())
     }
 
     @Test
-    fun testRootReturnedWhenNoContextSet() {
-        assertSame(root, storage.current())
+    fun testAttachAndRestore() {
+        val storage = createThreadLocalCurrentContextStorage()
+        val a = rootContext().set(key, "a")
+        val b = a.set(key, "b")
+        val scopeA = storage.attach(a)
+        val scopeB = storage.attach(b)
+        assertSame(b, storage.current())
+        assertTrue(scopeB.detach())
+        assertSame(a, storage.current())
+        assertTrue(scopeA.detach())
+        assertSame(rootContext(), storage.current())
     }
 
     @Test
-    fun testSetContextReturnedOnSameThread() {
-        val other = FakeContext()
-        storage.attach(other)
-        assertSame(other, storage.current())
-    }
-
-    @Test
-    fun testDetachRestoresPreviousState() {
-        val outer = FakeContext()
-        val inner = FakeContext()
-        val outerScope = storage.attach(outer)
-        val innerScope = storage.attach(inner)
-        assertSame(inner, storage.current())
-
-        assertTrue(innerScope.detach())
-        assertSame(outer, storage.current())
-        assertTrue(outerScope.detach())
-        assertSame(root, storage.current())
-    }
-
-    @Test
-    fun testSeparateInstancesAreIndependent() {
-        val first = FakeContext()
-        val second = FakeContext()
-        val otherStorage = ThreadLocalCurrentContextStorage { root }
-        storage.attach(first)
-        otherStorage.attach(second)
-        assertSame(first, storage.current())
-        assertSame(second, otherStorage.current())
-        assertNotSame(storage.current(), otherStorage.current())
+    fun testInstancesAreIndependent() {
+        val first = createThreadLocalCurrentContextStorage()
+        val second = createThreadLocalCurrentContextStorage()
+        val scope = first.attach(rootContext().set(key, "a"))
+        assertSame(rootContext(), second.current())
+        scope.detach()
     }
 }

@@ -1,17 +1,20 @@
 package io.opentelemetry.kotlin.context
 
+import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.ThreadLocal
 
 /**
- * An [CurrentContextStorage] that confines the current context to the thread that set it, or root
- * if none is set. On single-threaded targets (JS) the backing [ThreadLocal] degrades to a single
- * shared slot.
+ * Returns a new [CurrentContextStorage] that confines the current context to the thread that
+ * attached it. On single-threaded targets (JS) it degrades to a single shared slot.
+ *
+ * Every call returns a new, independent instance: two storages never share a thread-local slot.
  */
-public class ThreadLocalCurrentContextStorage(
-    rootSupplier: () -> Context,
-) : CurrentContextStorage {
+@ExperimentalApi
+public fun createThreadLocalCurrentContextStorage(): CurrentContextStorage = ThreadLocalCurrentContextStorage()
 
-    private val root by lazy { rootSupplier() }
+@OptIn(ExperimentalApi::class)
+internal class ThreadLocalCurrentContextStorage : CurrentContextStorage {
+
     private val current = ThreadLocal<Context>()
 
     override fun attach(context: Context): Scope {
@@ -25,5 +28,5 @@ public class ThreadLocalCurrentContextStorage(
         }
     }
 
-    override fun current(): Context = current.get() ?: root
+    override fun current(): Context = current.get() ?: rootContext()
 }

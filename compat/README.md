@@ -31,7 +31,7 @@ opentelemetry-java's `ContextStorage` when creating the SDK:
 ```kotlin
 val otel = createOpenTelemetry {
     context {
-        useOtelJavaContextStorage()
+        storage = createOtelJavaCurrentContextStorage()
     }
 }
 val javaApi = otel.toOtelJavaApi()
@@ -44,8 +44,23 @@ respects any `ContextStorage` wrappers that are installed (e.g. by the Java agen
 
 Without the option, do not read or set the opentelemetry-java current context directly through
 the APIs above. They use a separate store that the Kotlin SDK never sees. Use
-`OpenTelemetry.context.current()` and `Context.attach()` instead, or call `makeCurrent()` on a span
+`currentContext()` and `Context.attach()` instead, or call `makeCurrent()` on a span
 obtained from the Java API.
+
+Compat installs that storage process-wide when it is created. If another storage is already installed
+(for example one you installed with `installContextStorage()`, or a non-compat SDK created earlier),
+compat uses it and reports a warning: Kotlin and Java then only share the current context if that
+storage is backed by `createOtelJavaCurrentContextStorage()`.
+
+### How contexts cross the boundary
+
+Use `Context.toOtelJavaContext()` and `OtelJavaContext.toOtelKotlinContext()` to pass explicit contexts
+across. Kotlin contexts are plain `:api` values, so:
+
+- span and baggage are mirrored into Java's own keys, so Java code sees them;
+- custom Kotlin keys survive a round trip through Java, but Java code can't read them;
+- custom Java keys survive a round trip through Kotlin, but Kotlin code can't read them;
+- a span or baggage that Java code makes current is visible through `currentContext()`.
 
 This module only ships a JVM artifact because it depends on the `opentelemetry-java` library.
 

@@ -6,7 +6,6 @@ import io.opentelemetry.kotlin.behavior.OpenTelemetryBehavior
 import io.opentelemetry.kotlin.behavior.ResourceBehavior
 import io.opentelemetry.kotlin.clock.FakeClock
 import io.opentelemetry.kotlin.error.FakeSdkErrorHandler
-import io.opentelemetry.kotlin.factory.CompatContextFactory
 import io.opentelemetry.kotlin.resource.FakeResourceDetector
 import io.opentelemetry.kotlin.resource.SDK_DEFAULT_SERVICE_NAME
 import io.opentelemetry.kotlin.resource.SdkMode
@@ -74,7 +73,7 @@ internal class CompatResourceDetectionConfigTest {
             resource = ResourceBehavior(attributes = mapOf(testKey to "configured")),
         )
 
-        val resource = CompatSdkConfigFactory(cfg, behavior, clock, CompatContextFactory()).baseResource
+        val resource = CompatSdkConfigFactory(cfg, behavior, clock).baseResource
 
         assertEquals("configured", resource.attributes[testKey])
     }
@@ -92,7 +91,7 @@ internal class CompatResourceDetectionConfigTest {
             dsl = cfg.toBehavior(),
         )
 
-        val resource = CompatSdkConfigFactory(cfg, behavior, clock, CompatContextFactory()).baseResource
+        val resource = CompatSdkConfigFactory(cfg, behavior, clock).baseResource
 
         assertEquals("dsl-service", resource.attributes[ServiceAttributes.SERVICE_NAME])
     }
@@ -158,5 +157,5 @@ internal class CompatResourceDetectionConfigTest {
     }
 
     private fun baseResource(cfg: CompatOpenTelemetryConfig) =
-        CompatSdkConfigFactory(cfg, cfg.toBehavior(), clock, CompatContextFactory()).baseResource
+        CompatSdkConfigFactory(cfg, cfg.toBehavior(), clock).baseResource
 }

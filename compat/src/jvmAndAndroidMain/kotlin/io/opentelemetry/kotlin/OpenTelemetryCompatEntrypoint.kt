@@ -5,7 +5,6 @@ import io.opentelemetry.kotlin.error.SdkError
 import io.opentelemetry.kotlin.error.SdkErrorSeverity
 import io.opentelemetry.kotlin.error.guard
 import io.opentelemetry.kotlin.error.reportError
-import io.opentelemetry.kotlin.factory.CompatContextFactory
 import io.opentelemetry.kotlin.factory.CompatResourceFactory
 import io.opentelemetry.kotlin.init.CompatOpenTelemetryConfig
 import io.opentelemetry.kotlin.init.CompatSdkConfigFactory
@@ -29,8 +28,6 @@ public fun createCompatOpenTelemetry(
     clock: Clock = ClockAdapter(io.opentelemetry.sdk.common.Clock.getDefault()),
     config: OpenTelemetryConfigDsl.() -> Unit = {}
 ): OpenTelemetrySdk {
-    val contextFactory = CompatContextFactory()
-
     val cfg = CompatOpenTelemetryConfig(clock)
     cfg.sdkErrorHandler.guard("Failed to apply OpenTelemetry config, continuing with partial config") {
         cfg.config()
@@ -49,16 +46,16 @@ public fun createCompatOpenTelemetry(
         .read(configFilePath = cfg.configFilePath, dsl = cfg::toBehavior)
 
     // configFactory is legacy - use behavior to control SDK functionality instead
-    val configFactory = CompatSdkConfigFactory(cfg, behavior, clock, contextFactory)
+    val configFactory = CompatSdkConfigFactory(cfg, behavior, clock)
     return CompatOpenTelemetryImpl(
         tracerProvider = configFactory.buildTracerProvider(),
         loggerProvider = configFactory.buildLoggerProvider(),
         meterProvider = configFactory.buildMeterProvider(),
         clock = clock,
-        context = contextFactory,
         idGenerator = configFactory.idGenerator,
         resource = CompatResourceFactory,
         propagator = cfg.propagator,
         sdkErrorHandler = cfg.sdkErrorHandler,
+        processWideRegistration = registerCompatProcessWideState(cfg.sdkErrorHandler),
     )
 }

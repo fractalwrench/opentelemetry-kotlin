@@ -3,8 +3,9 @@ package io.opentelemetry.kotlin
 import io.opentelemetry.kotlin.behavior.AttributeLimitsBehavior
 import io.opentelemetry.kotlin.behavior.LogLimitsBehavior
 import io.opentelemetry.kotlin.behavior.SpanLimitsBehavior
+import io.opentelemetry.kotlin.context.ProcessWideRegistration
+import io.opentelemetry.kotlin.context.createSingleSlotCurrentContextStorage
 import io.opentelemetry.kotlin.error.guard
-import io.opentelemetry.kotlin.factory.ContextFactoryImpl
 import io.opentelemetry.kotlin.factory.ResourceFactoryImpl
 import io.opentelemetry.kotlin.init.OpenTelemetryConfigDsl
 import io.opentelemetry.kotlin.init.OpenTelemetryConfigImpl
@@ -45,7 +46,11 @@ public fun createOpenTelemetry(
     val configFactory = SdkConfigFactory(cfg, behavior, resourceFactory)
     val idGenerator = configFactory.idGenerator
 
-    val contextFactory = ContextFactoryImpl(cfg.sdkErrorHandler, cfg.contextConfig::generateStorage)
+    val registration = ProcessWideRegistration.register(
+        configured = cfg.contextConfig.storage,
+        default = ::createSingleSlotCurrentContextStorage,
+        errorHandler = cfg.sdkErrorHandler,
+    )
 
     val tracingConfig = configFactory.generateTracingConfig()
     val loggingConfig = configFactory.generateLoggingConfig()
@@ -54,7 +59,6 @@ public fun createOpenTelemetry(
         tracerProvider = TracerProviderImpl(
             clock = clock,
             tracingConfig = tracingConfig,
-            contextFactory = contextFactory,
             idGenerator = idGenerator,
             attributeLimits = behavior.attributeLimits ?: AttributeLimitsBehavior(),
             spanLimits = behavior.tracerProvider?.spanLimits ?: SpanLimitsBehavior(),
@@ -62,7 +66,6 @@ public fun createOpenTelemetry(
         loggerProvider = LoggerProviderImpl(
             clock = clock,
             loggingConfig = loggingConfig,
-            contextFactory = contextFactory,
             attributeLimits = behavior.attributeLimits ?: AttributeLimitsBehavior(),
             logLimits = behavior.loggerProvider?.logLimits ?: LogLimitsBehavior(),
         ),
@@ -72,9 +75,9 @@ public fun createOpenTelemetry(
         ),
         configProvider = NoopOpenTelemetry.configProvider,
         clock = clock,
-        context = contextFactory,
         idGenerator = idGenerator,
         resource = resourceFactory,
         propagator = cfg.propagator,
+        processWideRegistration = registration,
     )
 }

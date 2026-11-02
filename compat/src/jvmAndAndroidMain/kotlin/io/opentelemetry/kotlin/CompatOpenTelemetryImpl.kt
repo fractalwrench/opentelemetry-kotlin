@@ -1,12 +1,14 @@
 package io.opentelemetry.kotlin
 
 import io.opentelemetry.kotlin.config.ConfigProvider
+import io.opentelemetry.kotlin.context.ProcessWideRegistration
+import io.opentelemetry.kotlin.context.ProcessWideRegistrationOwner
+import io.opentelemetry.kotlin.context.createOtelJavaCurrentContextStorage
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.export.CompositeTelemetryCloseable
 import io.opentelemetry.kotlin.export.MutableShutdownState
 import io.opentelemetry.kotlin.export.OperationResultCode
 import io.opentelemetry.kotlin.export.TelemetryCloseable
-import io.opentelemetry.kotlin.factory.ContextFactory
 import io.opentelemetry.kotlin.factory.IdGenerator
 import io.opentelemetry.kotlin.factory.ResourceFactory
 import io.opentelemetry.kotlin.logging.LoggerProvider
@@ -19,12 +21,12 @@ internal class CompatOpenTelemetryImpl(
     override val loggerProvider: LoggerProvider,
     override val meterProvider: MeterProvider,
     override val clock: Clock,
-    override val context: ContextFactory,
     override val idGenerator: IdGenerator,
     override val resource: ResourceFactory,
     override val propagator: TextMapPropagator,
     sdkErrorHandler: SdkErrorHandler,
-) : OpenTelemetrySdk {
+    override val processWideRegistration: ProcessWideRegistration? = null,
+) : OpenTelemetrySdk, ProcessWideRegistrationOwner {
 
     // TODO: delegate to opentelemetry-java once it ships the Instrumentation Configuration API.
     override val configProvider: ConfigProvider = NoopOpenTelemetry.configProvider
@@ -45,5 +47,21 @@ internal class CompatOpenTelemetryImpl(
         else -> closeable.forceFlush()
     }
 
-    override suspend fun shutdown(): OperationResultCode = shutdownState.shutdown { closeable.shutdown() }
+    override suspend fun shutdown(): OperationResultCode = shutdownState.shutdown {
+        closeable.shutdown().also { processWideRegistration?.release() }
+    }
 }
+
+/**
+ * Compat mode always shares the current context with opentelemetry-java, so it installs the Java
+ * bridge storage. If another storage is already installed it is used instead, and Kotlin and Java
+ * contexts are only shared if that storage is itself backed by the Java bridge.
+ */
+internal fun registerCompatProcessWideState(errorHandler: SdkErrorHandler): ProcessWideRegistration =
+    ProcessWideRegistration.register(
+        configured = createOtelJavaCurrentContextStorage(),
+        default = ::createOtelJavaCurrentContextStorage,
+        errorHandler = errorHandler,
+        ignoredStorageMessage = "A CurrentContextStorage is already installed in this process, so compat mode uses " +
+            "it. Kotlin and Java contexts are only shared if it is backed by createOtelJavaCurrentContextStorage().",
+    )

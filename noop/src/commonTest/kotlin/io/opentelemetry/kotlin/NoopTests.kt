@@ -3,17 +3,23 @@ package io.opentelemetry.kotlin
 import io.opentelemetry.kotlin.config.NoopConfigProperties
 import io.opentelemetry.kotlin.config.NoopConfigProvider
 import io.opentelemetry.kotlin.context.FakeContext
-import io.opentelemetry.kotlin.context.NoopContext
 import io.opentelemetry.kotlin.context.createContextKey
+import io.opentelemetry.kotlin.context.currentContext
+import io.opentelemetry.kotlin.context.rootContext
 import io.opentelemetry.kotlin.export.OperationResultCode
 import io.opentelemetry.kotlin.logging.SeverityNumber
 import io.opentelemetry.kotlin.metrics.NoopObservableDoubleMeasurement
 import io.opentelemetry.kotlin.metrics.NoopObservableLongMeasurement
 import io.opentelemetry.kotlin.metrics.ObservableDoubleMeasurement
 import io.opentelemetry.kotlin.metrics.ObservableLongMeasurement
+import io.opentelemetry.kotlin.propagation.FakeTextMapGetter
+import io.opentelemetry.kotlin.propagation.FakeTextMapSetter
 import io.opentelemetry.kotlin.propagation.TextMapGetter
 import io.opentelemetry.kotlin.propagation.TextMapSetter
+import io.opentelemetry.kotlin.propagation.createCompositePropagator
 import io.opentelemetry.kotlin.propagation.createNoopPropagator
+import io.opentelemetry.kotlin.propagation.createW3CBaggagePropagator
+import io.opentelemetry.kotlin.propagation.createW3CTraceContextPropagator
 import io.opentelemetry.kotlin.tracing.FakeSpan
 import io.opentelemetry.kotlin.tracing.FakeSpanContext
 import io.opentelemetry.kotlin.tracing.NoopSpan
@@ -23,7 +29,6 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -158,46 +163,51 @@ internal class NoopTests {
     }
 
     @Test
-    fun testNoopExplicitContext() {
-        val otel = NoopOpenTelemetry
-
+    fun testNoopExplicitContextKeepsValues() {
         val key = createContextKey<String>("key")
-
-        val ctx = otel.context.root()
-
-        val other = ctx.set(key, "value")
-        assertSame(ctx, other)
-
-        assertNull(ctx.get(key))
+        val ctx = rootContext().set(key, "value")
+        assertEquals("value", ctx.get(key))
+        assertNull(rootContext().get(key))
     }
 
     @Test
-    fun testNoopCurrentContext() {
-        val otel = NoopOpenTelemetry
-        val ctx = otel.context.root()
-
-        // current context
-        ctx.attach().detach()
-        assertNotNull(otel.context.current())
+    fun testNoopCurrentContextWithoutStorage() {
+        val ctx = rootContext().set(createContextKey<String>("key"), "value")
+        assertTrue(ctx.attach().detach())
+        assertSame(rootContext(), currentContext())
     }
 
     @Test
-    fun testStoreSpan() {
-        val otel = NoopOpenTelemetry
-        val span = otel.tracerProvider.getTracer("tracer").startSpan("span")
-        val ctx = otel.context.root().storeSpan(span)
-        assertTrue(ctx is NoopContext)
+    fun testNoopPropagationRoundTrips() {
+        val propagator = createCompositePropagator(createW3CTraceContextPropagator(), createW3CBaggagePropagator())
+        val carrier = mapOf(
+            "traceparent" to "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            "baggage" to "tenant=acme",
+        )
+        val extracted = propagator.extract(rootContext(), carrier, FakeTextMapGetter)
+        assertEquals("0af7651916cd43dd8448eb211c80319c", extracted.extractSpan().spanContext.traceId)
+        assertEquals("acme", extracted.extractBaggage().getValue("tenant"))
+
+        val out = mutableMapOf<String, String>()
+        propagator.inject(extracted, out, FakeTextMapSetter)
+        assertEquals(carrier["traceparent"], out["traceparent"])
+        assertEquals("tenant=acme", out["baggage"])
     }
 
     @Test
-    fun testStoreSpanContext() {
-        val root = NoopOpenTelemetry.context.root()
-        assertSame(root, root.storeSpanContext(NoopSpanContext))
+    fun testNoopTracerPropagatesExtractedParent() {
+        val extracted = createW3CTraceContextPropagator().extract(
+            rootContext(),
+            mapOf("traceparent" to "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"),
+            FakeTextMapGetter,
+        )
+        val span = NoopOpenTelemetry.tracerProvider.getTracer("").startSpan("x", parentContext = extracted)
+        assertEquals(extracted.extractSpan().spanContext, span.spanContext)
     }
 
     @Test
     fun testNoopSpan() {
-        val span = NoopOpenTelemetry.context.root().extractSpan()
+        val span = NoopOpenTelemetry.tracerProvider.getTracer("").startSpan("x")
         assertTrue(span is NoopSpan)
         assertFalse(span.isRecording())
         assertSame(NoopSpanContext, span.spanContext)
@@ -234,7 +244,7 @@ internal class NoopTests {
     fun testNoopTextMapPropagator() {
         assertEquals(emptyList(), createNoopPropagator().fields())
 
-        val ctx = NoopOpenTelemetry.context.root()
+        val ctx = rootContext()
         val carrier = mutableMapOf("key" to "value")
 
         // inject is a no-op — setter must never be called

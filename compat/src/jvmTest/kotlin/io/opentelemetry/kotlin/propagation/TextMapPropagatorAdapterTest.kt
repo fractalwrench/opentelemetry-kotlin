@@ -2,12 +2,11 @@ package io.opentelemetry.kotlin.propagation
 
 import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator
 import io.opentelemetry.kotlin.ExperimentalApi
-import io.opentelemetry.kotlin.aliases.OtelJavaBaggage
-import io.opentelemetry.kotlin.aliases.OtelJavaContext
 import io.opentelemetry.kotlin.aliases.OtelJavaTextMapGetter
 import io.opentelemetry.kotlin.aliases.OtelJavaTextMapPropagator
-import io.opentelemetry.kotlin.context.ContextAdapter
-import io.opentelemetry.kotlin.context.FakeContext
+import io.opentelemetry.kotlin.baggage.createBaggage
+import io.opentelemetry.kotlin.context.createContextKey
+import io.opentelemetry.kotlin.context.rootContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -26,65 +25,45 @@ internal class TextMapPropagatorAdapterTest {
 
     @Test
     fun `inject writes baggage header into carrier`() {
-        val javaCtx = OtelJavaBaggage.builder()
-            .put("k", "v")
-            .build()
-            .storeInContext(OtelJavaContext.root())
-        val ktCtx = ContextAdapter(javaCtx)
+        val ctx = rootContext().storeBaggage(createBaggage { put("k", "v") })
         val carrier = mutableMapOf<String, String>()
 
-        TextMapPropagatorAdapter(impl).inject(ktCtx, carrier, MapSetter)
+        TextMapPropagatorAdapter(impl).inject(ctx, carrier, MapSetter)
 
         assertEquals("k=v", carrier["baggage"])
     }
 
     @Test
     fun `extract reads baggage header from carrier`() {
-        val carrier = mapOf("baggage" to "k=v")
-
-        val extracted = TextMapPropagatorAdapter(impl).extract(
-            ContextAdapter(OtelJavaContext.root()),
-            carrier,
-            MapGetter
-        )
-
-        val javaCtx = (extracted as ContextAdapter).impl
-        assertEquals("v", OtelJavaBaggage.fromContext(javaCtx).getEntryValue("k"))
+        val extracted = TextMapPropagatorAdapter(impl).extract(rootContext(), mapOf("baggage" to "k=v"), MapGetter)
+        assertEquals("v", extracted.extractBaggage().getValue("k"))
     }
 
     @Test
-    fun `extract returns ContextAdapter wrapping Java context`() {
-        val extracted = TextMapPropagatorAdapter(impl).extract(
-            ContextAdapter(OtelJavaContext.root()),
-            mapOf("baggage" to "k=v"),
-            MapGetter
-        )
-        assertTrue(extracted is ContextAdapter)
+    fun `extract keeps kotlin values of the input context`() {
+        val key = createContextKey<String>("key")
+        val input = rootContext().set(key, "value")
+        val extracted = TextMapPropagatorAdapter(impl).extract(input, mapOf("baggage" to "k=v"), MapGetter)
+        assertEquals("value", extracted.get(key))
     }
 
     @Test
-    fun `extract on malformed input returns input context unchanged`() {
-        val input = ContextAdapter(OtelJavaContext.root())
-        val extracted = TextMapPropagatorAdapter(impl).extract(
-            input,
-            mapOf("baggage" to ""),
-            MapGetter
-        )
-        val javaCtx = (extracted as ContextAdapter).impl
-        assertTrue(OtelJavaBaggage.fromContext(javaCtx).isEmpty)
+    fun `extract on malformed input leaves baggage empty`() {
+        val extracted = TextMapPropagatorAdapter(impl).extract(rootContext(), mapOf("baggage" to ""), MapGetter)
+        assertTrue(extracted.extractBaggage().asMap().isEmpty())
     }
 
     @Test
     fun `inject with empty context does not write carrier`() {
         val carrier = mutableMapOf<String, String>()
 
-        TextMapPropagatorAdapter(impl).inject(FakeContext(), carrier, MapSetter)
+        TextMapPropagatorAdapter(impl).inject(rootContext(), carrier, MapSetter)
 
         assertTrue(carrier.isEmpty())
     }
 
     @Test
-    fun `extract adapts context that is not a ContextAdapter`() {
+    fun `extract consults the getter`() {
         var getterCalled = false
         val getter = object : TextMapGetter<Map<String, String>> {
             override fun keys(carrier: Map<String, String>): Collection<String> {
@@ -103,14 +82,10 @@ internal class TextMapPropagatorAdapterTest {
             }
         }
 
-        val extracted = TextMapPropagatorAdapter(impl).extract(
-            FakeContext(),
-            mapOf("baggage" to "k=v"),
-            getter
-        )
+        val extracted = TextMapPropagatorAdapter(impl).extract(rootContext(), mapOf("baggage" to "k=v"), getter)
 
         assertTrue(getterCalled)
-        assertTrue(extracted is FakeContext)
+        assertEquals("v", extracted.extractBaggage().getValue("k"))
     }
 
     @Test

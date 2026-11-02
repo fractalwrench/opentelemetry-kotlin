@@ -1,32 +1,30 @@
 package io.opentelemetry.kotlin.context
 
+import io.opentelemetry.kotlin.ExperimentalApi
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
-import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
+@OptIn(ExperimentalApi::class)
 internal class JvmThreadLocalCurrentContextStorageTest {
 
     @Test
     fun testContextIsIsolatedPerThread() {
-        val root = FakeContext()
-        val storage = ThreadLocalCurrentContextStorage { root }
-
-        val mainContext = FakeContext()
-        storage.attach(mainContext)
+        val key = createContextKey<String>("key")
+        val storage = createThreadLocalCurrentContextStorage()
+        val mainContext = rootContext().set(key, "main")
+        val scope = storage.attach(mainContext)
 
         val observedFromOtherThread = AtomicReference<Context>()
-        val otherContext = FakeContext()
-
         val thread = Thread {
             observedFromOtherThread.set(storage.current())
-            storage.attach(otherContext)
+            storage.attach(rootContext().set(key, "other"))
         }
         thread.start()
         thread.join()
 
-        assertSame(root, observedFromOtherThread.get())
-        assertNotSame(mainContext, observedFromOtherThread.get())
+        assertSame(rootContext(), observedFromOtherThread.get())
         assertSame(mainContext, storage.current())
+        scope.detach()
     }
 }

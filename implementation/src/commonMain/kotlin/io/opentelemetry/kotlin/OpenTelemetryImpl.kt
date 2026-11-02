@@ -1,13 +1,14 @@
 package io.opentelemetry.kotlin
 
 import io.opentelemetry.kotlin.config.ConfigProvider
+import io.opentelemetry.kotlin.context.ProcessWideRegistration
+import io.opentelemetry.kotlin.context.ProcessWideRegistrationOwner
 import io.opentelemetry.kotlin.export.MutableShutdownState
 import io.opentelemetry.kotlin.export.OperationResultCode
 import io.opentelemetry.kotlin.export.OperationResultCode.Failure
 import io.opentelemetry.kotlin.export.OperationResultCode.Success
 import io.opentelemetry.kotlin.export.TelemetryCloseable
 import io.opentelemetry.kotlin.export.runWithTimeout
-import io.opentelemetry.kotlin.factory.ContextFactory
 import io.opentelemetry.kotlin.factory.IdGenerator
 import io.opentelemetry.kotlin.factory.ResourceFactory
 import io.opentelemetry.kotlin.logging.LoggerProvider
@@ -21,12 +22,12 @@ internal class OpenTelemetryImpl(
     override val meterProvider: MeterProvider,
     override val configProvider: ConfigProvider,
     override val clock: Clock,
-    override val context: ContextFactory,
     override val idGenerator: IdGenerator,
     override val resource: ResourceFactory,
     override val propagator: TextMapPropagator,
     private val timeoutMs: Long = 3000,
-) : OpenTelemetrySdk {
+    override val processWideRegistration: ProcessWideRegistration? = null,
+) : OpenTelemetrySdk, ProcessWideRegistrationOwner {
 
     private val shutdownState: MutableShutdownState = MutableShutdownState()
 
@@ -62,6 +63,9 @@ internal class OpenTelemetryImpl(
                     else -> Success
                 }
                 combineResults(tracerResult, loggerResult, meterResult)
+            }.also {
+                // after processors flush, so their final work still sees this SDK's storage and handler
+                processWideRegistration?.release()
             }
         }
 

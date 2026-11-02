@@ -11,7 +11,6 @@ kotlin {
         commonMain {
             dependencies {
                 api(project(":api"))
-                api(project(":sdk-api"))
                 implementation(project(":platform-implementations"))
             }
         }

@@ -5,15 +5,16 @@ import io.opentelemetry.kotlin.aliases.OtelJavaContext
 import io.opentelemetry.kotlin.aliases.OtelJavaOpenTelemetry
 import io.opentelemetry.kotlin.aliases.OtelJavaSpan
 import io.opentelemetry.kotlin.baggage.createBaggage
+import io.opentelemetry.kotlin.context.createOtelJavaCurrentContextStorage
+import io.opentelemetry.kotlin.context.currentContext
+import io.opentelemetry.kotlin.context.rootContext
 import io.opentelemetry.kotlin.error.FakeSdkErrorHandler
-import io.opentelemetry.kotlin.init.useOtelJavaContextStorage
 import io.opentelemetry.kotlin.toOtelJavaApi
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -32,7 +33,7 @@ internal class OtelJavaContextStorageTest {
         errorHandler = FakeSdkErrorHandler()
         harness = IntegrationTestHarness(testScheduler) {
             errorHandler(errorHandler)
-            context { useOtelJavaContextStorage() }
+            context { storage = createOtelJavaCurrentContextStorage() }
         }
         javaApi = harness.kotlinApi.toOtelJavaApi()
     }
@@ -54,13 +55,13 @@ internal class OtelJavaContextStorageTest {
 
     @Test
     fun testCurrentIsRootByDefault() {
-        assertSame(harness.kotlinApi.context.root(), harness.kotlinApi.context.current())
+        assertSame(rootContext(), currentContext())
     }
 
     @Test
     fun testKotlinAttachVisibleToJavaStaticApis() {
         val span = harness.tracer.startSpan("kotlin_span")
-        val ctx = harness.kotlinApi.context.current()
+        val ctx = currentContext()
             .storeSpan(span)
             .storeBaggage(createBaggage { put("key", "value") })
         val scope = ctx.attach()
@@ -78,7 +79,7 @@ internal class OtelJavaContextStorageTest {
     fun testJavaMakeCurrentParentsKotlinSpan() = runTest {
         val javaSpan = javaApi.tracerProvider.get("tracer").spanBuilder("java_span").startSpan()
         OtelJavaContext.current().with(javaSpan).makeCurrent().use {
-            assertEquals(javaSpan.spanContext.spanId, harness.kotlinApi.context.current().extractSpan().spanContext.spanId)
+            assertEquals(javaSpan.spanContext.spanId, currentContext().extractSpan().spanContext.spanId)
             harness.tracer.startSpan("kotlin_span").end()
         }
         javaSpan.end()
@@ -92,17 +93,17 @@ internal class OtelJavaContextStorageTest {
     @Test
     fun testJavaBaggageVisibleToKotlin() {
         OtelJavaBaggage.builder().put("key", "value").build().makeCurrent().use {
-            assertEquals("value", harness.kotlinApi.context.current().extractBaggage().asMap()["key"]?.value)
+            assertEquals("value", currentContext().extractBaggage().asMap()["key"]?.value)
         }
-        assertSame(harness.kotlinApi.context.root(), harness.kotlinApi.context.current())
+        assertSame(rootContext(), currentContext())
     }
 
     @Test
     fun testNestedScopesRestoreInOrder() {
         val outer = harness.tracer.startSpan("outer")
         val inner = harness.tracer.startSpan("inner")
-        val outerScope = harness.kotlinApi.context.root().storeSpan(outer).attach()
-        val innerScope = harness.kotlinApi.context.current().storeSpan(inner).attach()
+        val outerScope = rootContext().storeSpan(outer).attach()
+        val innerScope = currentContext().storeSpan(inner).attach()
 
         assertEquals(inner.spanContext.spanId, OtelJavaSpan.current().spanContext.spanId)
         assertTrue(innerScope.detach())
@@ -114,12 +115,17 @@ internal class OtelJavaContextStorageTest {
 
     @Test
     fun testOutOfOrderDetachReportsMisuse() {
-        val outerScope = harness.kotlinApi.context.root().storeSpan(harness.tracer.startSpan("outer")).attach()
-        val innerScope = harness.kotlinApi.context.current().storeSpan(harness.tracer.startSpan("inner")).attach()
-        assertFalse(outerScope.detach())
-        assertEquals("Scope.detach", errorHandler.apiMisuses.single().api)
+        val outerScope = rootContext().storeSpan(harness.tracer.startSpan("outer")).attach()
+        val innerScope = currentContext().storeSpan(harness.tracer.startSpan("inner")).attach()
 
+        // reported, and passed through to opentelemetry-java, which ignores an out-of-order close
+        outerScope.detach()
+        assertEquals("Scope.detach", errorHandler.apiMisuses.single().api)
+        assertTrue(OtelJavaSpan.current().spanContext.isValid)
+
+        // detaching inner is in order again, and restores outer
         assertTrue(innerScope.detach())
-        assertTrue(outerScope.detach())
+        assertEquals(1, errorHandler.apiMisuses.size)
+        OtelJavaContext.root().makeCurrent()
     }
 }

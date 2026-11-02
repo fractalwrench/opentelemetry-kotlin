@@ -15,9 +15,7 @@ kotlin {
                 implementation(project(":api-ext"))
                 implementation(project(":sdk-api"))
                 implementation(project(":config"))
-                implementation(project(":context-impl"))
                 implementation(project(":context-single-slot"))
-                implementation(project(":context-threadlocal"))
                 implementation(project(":propagation-utils"))
                 implementation(project(":config-dsl"))
                 implementation(project(":model"))
@@ -34,6 +32,7 @@ kotlin {
             dependencies {
                 implementation(project(":api-ext"))
                 implementation(project(":test-fakes"))
+                implementation(project(":context-threadlocal"))
                 implementation(project(":integration-test"))
                 implementation(project(":serializable-models"))
                 implementation(libs.kotlinx.coroutines.test)

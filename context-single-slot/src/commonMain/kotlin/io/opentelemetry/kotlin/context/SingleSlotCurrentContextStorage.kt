@@ -1,16 +1,19 @@
 package io.opentelemetry.kotlin.context
 
+import io.opentelemetry.kotlin.ExperimentalApi
 import kotlin.concurrent.Volatile
 
 /**
- * A simple implementation of [CurrentContextStorage] that only allows one context at any time,
- * and doesn't use thread locals/coroutine context to distinguish between what is current.
+ * Returns a new [CurrentContextStorage] that holds one current context shared by every thread and
+ * coroutine. This is the SDK's default mechanism.
+ *
+ * Every call returns a new, independent instance.
  */
-public class SingleSlotCurrentContextStorage(
-    rootSupplier: () -> Context
-) : CurrentContextStorage {
+@ExperimentalApi
+public fun createSingleSlotCurrentContextStorage(): CurrentContextStorage = SingleSlotCurrentContextStorage()
 
-    private val root by lazy { rootSupplier() }
+@OptIn(ExperimentalApi::class)
+internal class SingleSlotCurrentContextStorage : CurrentContextStorage {
 
     @Volatile
     private var current: Context? = null
@@ -26,5 +29,5 @@ public class SingleSlotCurrentContextStorage(
         }
     }
 
-    override fun current(): Context = current ?: root
+    override fun current(): Context = current ?: rootContext()
 }

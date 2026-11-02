@@ -10,11 +10,9 @@ import io.opentelemetry.kotlin.behavior.OpenTelemetryBehavior
 import io.opentelemetry.kotlin.behavior.SpanLimitsBehavior
 import io.opentelemetry.kotlin.behavior.TracerProviderBehavior
 import io.opentelemetry.kotlin.clock.FakeClock
-import io.opentelemetry.kotlin.context.Context
-import io.opentelemetry.kotlin.context.CurrentContextStorageMode
-import io.opentelemetry.kotlin.context.FakeContext
 import io.opentelemetry.kotlin.context.FakeCurrentContextStorage
-import io.opentelemetry.kotlin.context.SingleSlotCurrentContextStorage
+import io.opentelemetry.kotlin.context.createSingleSlotCurrentContextStorage
+import io.opentelemetry.kotlin.context.createThreadLocalCurrentContextStorage
 import io.opentelemetry.kotlin.error.FakeSdkErrorHandler
 import io.opentelemetry.kotlin.error.SdkError
 import io.opentelemetry.kotlin.error.SdkErrorHandler
@@ -46,7 +44,7 @@ internal class OpenTelemetryConfigImplTest {
         val resolver = SdkConfigFactory(cfg, behavior)
         assertNull(resolver.generateTracingConfig().processor)
         assertNull(resolver.generateLoggingConfig().processor)
-        assertNull(cfg.contextConfig.storageMode)
+        assertNull(cfg.contextConfig.storage)
         assertSame(NoopOpenTelemetry.propagator, cfg.propagator)
     }
 
@@ -98,7 +96,7 @@ internal class OpenTelemetryConfigImplTest {
             export { FakeSpanProcessor() }
         }
         cfg.context {
-            assertNull(storageMode)
+            assertNull(storage)
         }
         val behavior = defaultBehaviorReader().read(cfg.configFilePath, cfg::toBehavior)
         val resolver = SdkConfigFactory(cfg, behavior)
@@ -288,65 +286,35 @@ internal class OpenTelemetryConfigImplTest {
     }
 
     @Test
-    fun testDefaultStorage() {
+    fun testDefaultStorageIsUnset() {
         val cfg = OpenTelemetryConfigImpl(clock)
-        val rootContext = FakeContext()
-        val storage = cfg.contextConfig.generateStorage { rootContext }
-        assertTrue(storage is SingleSlotCurrentContextStorage)
+        assertNull(cfg.contextConfig.storage)
     }
 
     @Test
-    fun testThreadLocalStorage() {
-        val cfg = OpenTelemetryConfigImpl(clock).apply {
-            context {
-                storageMode = CurrentContextStorageMode.THREAD_LOCAL
+    fun testFactoryStorages() {
+        listOf(
+            createSingleSlotCurrentContextStorage(),
+            createThreadLocalCurrentContextStorage(),
+            FakeCurrentContextStorage(),
+        ).forEach { storage ->
+            val cfg = OpenTelemetryConfigImpl(clock).apply {
+                context { this.storage = storage }
             }
+            assertSame(storage, cfg.contextConfig.storage)
         }
-        val storage = cfg.contextConfig.generateStorage(::FakeContext)
-        val root = FakeContext()
-        val rootStorage = cfg.contextConfig.generateStorage { root }
-        assertNotNull(storage)
-        assertSame(root, rootStorage.current())
     }
 
     @Test
-    fun testCustomStorage() {
+    fun testLastStorageWins() {
         val custom = FakeCurrentContextStorage()
         val cfg = OpenTelemetryConfigImpl(clock).apply {
             context {
-                storage { custom }
+                storage = createSingleSlotCurrentContextStorage()
+                storage = custom
             }
         }
-        assertSame(custom, cfg.contextConfig.generateStorage(::FakeContext))
-    }
-
-    @Test
-    fun testCustomStorageOverridesStorageMode() {
-        val custom = FakeCurrentContextStorage()
-        val cfg = OpenTelemetryConfigImpl(clock).apply {
-            context {
-                storageMode = CurrentContextStorageMode.SINGLE_SLOT
-                storage { custom }
-            }
-        }
-        assertSame(custom, cfg.contextConfig.generateStorage(::FakeContext))
-    }
-
-    @Test
-    fun testCustomStorageReceivesRootSupplier() {
-        val root = FakeContext()
-        var captured: (() -> Context)? = null
-        val cfg = OpenTelemetryConfigImpl(clock).apply {
-            context {
-                storage { rootSupplier ->
-                    captured = rootSupplier
-                    SingleSlotCurrentContextStorage(rootSupplier)
-                }
-            }
-        }
-        val storage = cfg.contextConfig.generateStorage { root }
-        assertSame(root, captured?.invoke())
-        assertSame(root, storage.current())
+        assertSame(custom, cfg.contextConfig.storage)
     }
 
     @Test

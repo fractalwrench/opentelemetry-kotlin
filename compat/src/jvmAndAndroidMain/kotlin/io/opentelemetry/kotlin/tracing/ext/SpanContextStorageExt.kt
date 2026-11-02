@@ -4,8 +4,6 @@ package io.opentelemetry.kotlin.tracing.ext
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.aliases.OtelJavaSpan
 import io.opentelemetry.kotlin.context.Context
-import io.opentelemetry.kotlin.context.ContextAdapter
-import io.opentelemetry.kotlin.context.toOtelJavaContext
 import io.opentelemetry.kotlin.tracing.Span
 import io.opentelemetry.kotlin.tracing.model.OtelJavaSpanAdapter
 import io.opentelemetry.kotlin.tracing.model.SpanAdapter
@@ -17,7 +15,7 @@ import io.opentelemetry.kotlin.tracing.model.SpanAdapter
  */
 @ExperimentalApi
 public fun Span.storeInContext(context: Context): Context {
-    return ContextAdapter(context.toOtelJavaContext().with(toOtelJavaSpan()))
+    return context.storeSpan(this)
 }
 
 /**

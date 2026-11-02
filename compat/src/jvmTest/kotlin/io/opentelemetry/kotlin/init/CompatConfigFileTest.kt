@@ -4,7 +4,6 @@ import io.opentelemetry.exporter.logging.LoggingSpanExporter
 import io.opentelemetry.kotlin.clock.FakeClock
 import io.opentelemetry.kotlin.createCompatOpenTelemetry
 import io.opentelemetry.kotlin.error.FakeSdkErrorHandler
-import io.opentelemetry.kotlin.factory.CompatContextFactory
 import io.opentelemetry.kotlin.framework.SdkTracker
 import io.opentelemetry.kotlin.logging.export.FakeLogRecordProcessor
 import io.opentelemetry.kotlin.tracing.export.FakeSpanProcessor
@@ -59,7 +58,7 @@ internal class CompatConfigFileTest {
             configFile(writeConfigFile(CONFIG_FILE))
         }
         val behavior = defaultCompatBehaviorReader().read(cfg.configFilePath, cfg::toBehavior)
-        val configFactory = CompatSdkConfigFactory(cfg, behavior, clock, CompatContextFactory())
+        val configFactory = CompatSdkConfigFactory(cfg, behavior, clock)
         assertEquals(64, configFactory.spanLimits.attributeCountLimit)
         assertEquals(64, configFactory.logLimits.attributeCountLimit)
     }
@@ -73,7 +72,7 @@ internal class CompatConfigFileTest {
             }
         }
         val behavior = defaultCompatBehaviorReader().read(cfg.configFilePath, cfg::toBehavior)
-        val configFactory = CompatSdkConfigFactory(cfg, behavior, clock, CompatContextFactory())
+        val configFactory = CompatSdkConfigFactory(cfg, behavior, clock)
         assertEquals(32, configFactory.spanLimits.attributeCountLimit)
         assertEquals(32, configFactory.logLimits.attributeCountLimit)
     }

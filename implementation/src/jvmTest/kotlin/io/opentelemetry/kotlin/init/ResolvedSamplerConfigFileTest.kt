@@ -3,7 +3,7 @@ package io.opentelemetry.kotlin.init
 import io.opentelemetry.kotlin.attributes.AttributesModel
 import io.opentelemetry.kotlin.clock.FakeClock
 import io.opentelemetry.kotlin.config.envar.reader.EnvVarReader
-import io.opentelemetry.kotlin.factory.ContextFactoryImpl
+import io.opentelemetry.kotlin.context.rootContext
 import io.opentelemetry.kotlin.tracing.SpanKind
 import io.opentelemetry.kotlin.tracing.sampling.ParentBasedSampler
 import io.opentelemetry.kotlin.tracing.sampling.Sampler
@@ -18,7 +18,6 @@ import kotlin.test.assertIs
 internal class ResolvedSamplerConfigFileTest {
 
     private val clock = FakeClock()
-    private val contextFactory = ContextFactoryImpl()
 
     private fun samplerOf(
         getEnvVar: (String) -> String? = { null },
@@ -39,7 +38,7 @@ internal class ResolvedSamplerConfigFileTest {
     }
 
     private fun Sampler.shouldSampleRoot(): Decision = shouldSample(
-        context = contextFactory.root(),
+        context = rootContext(),
         traceIdBytes = ZERO_TRACE_ID,
         name = "root",
         spanKind = SpanKind.INTERNAL,

@@ -33,7 +33,7 @@ internal class ContextValue(
     @Suppress("UNCHECKED_CAST")
     override fun <T> get(key: ContextKey<T>): T? = values[key] as? T
 
-    override fun attach(): Scope = UnattachedScope
+    override fun attach(): Scope = installedContextStorage()?.attach(this) ?: UnattachedScope
 
     override fun storeSpan(span: Span): Context = set(SPAN_KEY, span)
 

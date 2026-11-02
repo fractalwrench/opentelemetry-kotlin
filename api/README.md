@@ -36,51 +36,118 @@ Any component marked stable here should NOT have api surface marked with `@Exper
 | propagation | ⚠️          | ️      |
 | tracing     | ⚠️          | ️      |
 
-## Current Context API - an explanation
+## Context API
 
-The [current Context API](https://opentelemetry.io/docs/specs/otel/context/#optional-global-operations)
-allows for context to be applied to traces/logs automatically, rather than explicitly passing in a
-`Context` parameter every time. This is a fairly tricky concept to grasp intuitively, but
-essentially it composes of these parts:
+The Context API follows the [opentelemetry-js](https://opentelemetry.io/docs/languages/js/context/)
+model. None of it needs an `OpenTelemetry` instance.
 
-1. A storage mechanism that records _what_ the current context is. There can only be one
-   current context at a time in this API. The storage mechanism is fulfilled
-   by the `CurrentContextStorage` API.
-2. A mechanism for context objects to set themselves as the current context. This is
-   achieved by calling `Context.attach()`, which stores the object in the `CurrentContextStorage`
-   and returns a `Scope` object
-3. When a context object no longer needs to be the current context, there needs to be a way to
-   reset the current context to its previous state. A `Scope` object is a token that achieves this
-   goal by calling `detach()`
-4. A means of determining what the current context is at any one time. `ContextFactory.current()`
-   solves this.
-5. The library users calls `attach()` for contexts at appropriate units of execution in their
-   application (e.g. spanning a function, or a particular workflow). Nested calls are allowed
+- `rootContext()` returns the root `Context`, which holds no values.
+- `currentContext()` returns the current `Context` (JS: `context.active()`).
+- `ctx.runWithContext { ... }` makes `ctx` current while the block runs, then restores the previous
+  context, even if the block throws (JS: `context.with(ctx, fn)`).
+- `ctx.attach()` returns a `Scope`; `scope.detach()` restores the previous context. Prefer
+  `runWithContext`, which can't leak the scope.
 
-### Current Context API example usage
+### Where the current context lives
 
-A code sample makes this easier to understand:
+The current context is held by one process-wide `CurrentContextStorage` (JS: `ContextManager`).
+**Nothing happens until a storage is installed**: `currentContext()` returns `rootContext()`, and
+`attach()` does nothing. Explicit contexts, `set`/`get`, spans, baggage and propagators work
+regardless.
+
+The SDK installs a storage at init if none is installed yet, so most apps pick one in config:
+
+```kotlin
+createOpenTelemetry {
+    context { storage = createThreadLocalCurrentContextStorage() }
+}
+```
+
+Each mechanism ships in its own module:
+
+| Module                | Factory                                   | Behaviour                             |
+|-----------------------|-------------------------------------------|---------------------------------------|
+| `context-single-slot` | `createSingleSlotCurrentContextStorage()` | One slot for every thread. Default.   |
+| `context-threadlocal` | `createThreadLocalCurrentContextStorage()` | One slot per thread.                 |
+| `compat`              | `createOtelJavaCurrentContextStorage()`   | Shares opentelemetry-java's storage.  |
+
+You can also install a storage without an SDK (JS: `context.setGlobalContextManager()`):
+
+```kotlin
+installContextStorage(createThreadLocalCurrentContextStorage()) // false if one is already installed
+```
+
+Rules:
+
+- The first install wins. An SDK created later uses the installed storage; if it was configured
+  with a different one, it reports a WARNING to its error handler.
+- `OpenTelemetrySdk.shutdown()` uninstalls the storage only if that SDK installed it.
+- Every installed storage is wrapped so that scope misuse (detaching out of order or twice, attaching
+  the context that's already current) and exceptions thrown by the storage are reported to the SDK's
+  error handler. Misuse is only reported: the attach or detach still happens.
+
+### Errors before an SDK exists
+
+The API reports errors it catches (for example a throwing `createSpanContext { }` action, or a
+throwing `TextMapGetter`) to a process-wide sink. Until an SDK installs its `SdkErrorHandler`, the
+sink buffers up to 64 errors, then replays them in order to the first handler that is installed.
+
+### Example usage
 
 ```kotlin
 // Declare keys once and share the instance with whatever needs to read the value back.
 // A key with a matching name is a different key - see the ContextKey docs.
 private val USER_ID: ContextKey<String> = createContextKey("user.id")
 
-internal fun exampleUsage(api: OpenTelemetry) {
-    // 1. obtain the current context. Defaults to root() if no current context is available.
-    val ctx = api.context.current()
+internal fun exampleUsage(tracer: Tracer) {
+    // 1. derive a new context from the current one. Nothing becomes current yet.
+    val ctx = currentContext().set(USER_ID, "abc123")
 
-    // 2. create a new context but don't set it as the current context.
-    val newContext = ctx.set(USER_ID, "abc123")
-
-    // 3. set the new context as the current context.
-    val scope = newContext.attach()
-
-    // 4. perform tracing/logging here. tracers/loggers should call current()
-    // internally so the appropriate context is set automatically.
-    api.tracerProvider.getTracer("tracer").startSpan("my_span")
-
-    // 5. unset the new context as the current context and restore the previous context.
-    scope.detach()
+    // 2. make it current while the block runs.
+    ctx.runWithContext {
+        // 3. tracers and loggers read currentContext() when no explicit parent is given.
+        val span = tracer.startSpan("my_span")
+        println(currentContext().get(USER_ID)) // abc123
+        span.end()
+    }
+    // 4. the previous context is current again.
 }
 ```
+
+### Layered context storage
+
+`CurrentContextStorage` is small enough to compose in user code. For example, a precedence storage
+with any number of slots (here `hyper_local > local > global`) returns the first slot that isn't
+empty, and routes each attach to a slot named by a `ContextKey` the context carries:
+
+```kotlin
+enum class Slot { HYPER_LOCAL, LOCAL, GLOBAL }
+
+private val SLOT: ContextKey<Slot> = createContextKey("slot")
+
+fun Context.inSlot(slot: Slot): Context = set(SLOT, slot)
+
+class PrecedenceContextStorage : CurrentContextStorage {
+    private val slots = mapOf(
+        Slot.HYPER_LOCAL to createThreadLocalCurrentContextStorage(),
+        Slot.LOCAL to createThreadLocalCurrentContextStorage(),
+        Slot.GLOBAL to createSingleSlotCurrentContextStorage(),
+    )
+
+    override fun current(): Context =
+        Slot.entries.map { slots.getValue(it).current() }.firstOrNull { it !== rootContext() } ?: rootContext()
+
+    override fun attach(context: Context): Scope =
+        slots.getValue(context.get(SLOT) ?: Slot.GLOBAL).attach(context)
+}
+
+installContextStorage(PrecedenceContextStorage())
+rootContext().inSlot(Slot.LOCAL).storeSpan(span).runWithContext { /* ... */ }
+```
+
+This works because empty storages return the `rootContext()` instance, the factories return
+independent instances, and the API never assumes that `attach(ctx)` makes `ctx` current. Note that:
+
+- contexts derived from one in a slot keep its `SLOT` value, so they attach to the same slot;
+- the whole context comes from one slot. `Context` can't list its keys, so there is no per-key
+  fallthrough across slots (span and baggage can be combined by hand with `extractSpan()`/`extractBaggage()`).
