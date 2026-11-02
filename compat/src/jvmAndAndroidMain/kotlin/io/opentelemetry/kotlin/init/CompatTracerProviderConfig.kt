@@ -22,8 +22,6 @@ import io.opentelemetry.kotlin.config.dsl.tracing.SpanLimitsConfigDslImpl
 import io.opentelemetry.kotlin.config.dsl.tracing.TraceExportConfigDslImpl
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.error.guardOrDefault
-import io.opentelemetry.kotlin.factory.CompatContextFactory
-import io.opentelemetry.kotlin.factory.ContextFactory
 import io.opentelemetry.kotlin.factory.IdGenerator
 import io.opentelemetry.kotlin.factory.OtelJavaIdGeneratorAdapter
 import io.opentelemetry.kotlin.resource.Resource
@@ -154,7 +152,6 @@ internal class CompatTracerProviderConfig(
         idGenerator: IdGenerator,
         baseResource: Resource = ResourceAdapter(OtelJavaResource.builder().build()),
         spanLimits: SpanLimitsBehavior,
-        contextFactory: ContextFactory = CompatContextFactory(),
     ): TracerProvider {
         builder.setIdGenerator(
             when (idGenerator) {
@@ -180,7 +177,7 @@ internal class CompatTracerProviderConfig(
         }
         builder.setClock(clock.toOtelJavaClock())
         sampler?.let(::setSampler)
-        return TracerProviderAdapter(builder.build(), contextFactory, sdkErrorHandler)
+        return TracerProviderAdapter(builder.build(), sdkErrorHandler)
     }
 
     fun toBehavior(): TracerProviderBehavior =

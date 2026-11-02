@@ -17,7 +17,7 @@ import io.opentelemetry.kotlin.ExperimentalApi
  * @return true if installed, false if a storage was already installed
  */
 @ExperimentalApi
-internal fun installContextStorage(storage: CurrentContextStorage): Boolean =
+public fun installContextStorage(storage: CurrentContextStorage): Boolean =
     ProcessWideContextStorageSlot.install(
         original = storage,
         effective = MisuseReportingCurrentContextStorage(storage, ::rootContext),
@@ -30,5 +30,14 @@ internal fun installContextStorage(storage: CurrentContextStorage): Boolean =
  * @return true if uninstalled, false if nothing is installed or another storage is installed
  */
 @ExperimentalApi
-internal fun uninstallContextStorage(storage: CurrentContextStorage): Boolean =
+public fun uninstallContextStorage(storage: CurrentContextStorage): Boolean =
     ProcessWideContextStorageSlot.uninstall(storage)
+
+/**
+ * Uninstalls any process-wide [CurrentContextStorage], regardless of who installed it. Call it in
+ * `@AfterTest`, never in a `@BeforeTest` that runs alongside another `@BeforeTest` that creates an SDK.
+ */
+@ProcessWideStateTestingApi
+public fun resetContextStorageForTesting() {
+    ProcessWideContextStorageSlot.reset()
+}

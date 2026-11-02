@@ -5,14 +5,12 @@ import io.opentelemetry.kotlin.behavior.LogLimitsBehavior
 import io.opentelemetry.kotlin.behavior.SpanLimitsBehavior
 import io.opentelemetry.kotlin.config.ConfigProviderImpl
 import io.opentelemetry.kotlin.context.CurrentContextStorage
-import io.opentelemetry.kotlin.context.TempContextStandInApi
-import io.opentelemetry.kotlin.context.internalInstallContextStorage
+import io.opentelemetry.kotlin.context.installContextStorage
 import io.opentelemetry.kotlin.error.SdkError
 import io.opentelemetry.kotlin.error.SdkErrorHandler
 import io.opentelemetry.kotlin.error.SdkErrorSeverity
 import io.opentelemetry.kotlin.error.guard
 import io.opentelemetry.kotlin.error.setProcessSdkErrorHandler
-import io.opentelemetry.kotlin.factory.ContextFactoryImpl
 import io.opentelemetry.kotlin.factory.ResourceFactoryImpl
 import io.opentelemetry.kotlin.init.OpenTelemetryConfigDsl
 import io.opentelemetry.kotlin.init.OpenTelemetryConfigImpl
@@ -66,9 +64,8 @@ public fun createOpenTelemetry(
     val metricsConfig = configFactory.generateMetricsConfig()
 
     // Claim process-wide state last, so that a failure earlier in init doesn't leave it claimed.
-    val installedStorage = installContextStorage(cfg)
+    val installedStorage = claimContextStorage(cfg)
     val ownsErrorSink = setProcessSdkErrorHandler(cfg.sdkErrorHandler)
-    val contextFactory = ContextFactoryImpl(cfg.sdkErrorHandler, installedStorage)
     return OpenTelemetryImpl(
         tracerProvider = TracerProviderImpl(
             clock = clock,
@@ -89,10 +86,10 @@ public fun createOpenTelemetry(
         ),
         configProvider = ConfigProviderImpl { behaviorReader.readInstrumentation(configFilePath) },
         clock = clock,
-        context = contextFactory,
         idGenerator = idGenerator,
         resource = resourceFactory,
         propagator = cfg.propagator,
+        sdkErrorHandler = cfg.sdkErrorHandler,
         installedStorage = installedStorage,
         ownsErrorSink = ownsErrorSink,
     )
@@ -103,11 +100,10 @@ public fun createOpenTelemetry(
  * If another storage is already installed it is used instead, and a warning is reported only if
  * a storage was explicitly configured.
  */
-@OptIn(TempContextStandInApi::class)
-private fun installContextStorage(cfg: OpenTelemetryConfigImpl): CurrentContextStorage? {
+private fun claimContextStorage(cfg: OpenTelemetryConfigImpl): CurrentContextStorage? {
     val contextConfig = cfg.contextConfig
     val storage = contextConfig.generateStorage()
-    if (internalInstallContextStorage(storage)) {
+    if (installContextStorage(storage)) {
         return storage
     }
     if (contextConfig.explicitlyConfigured) {

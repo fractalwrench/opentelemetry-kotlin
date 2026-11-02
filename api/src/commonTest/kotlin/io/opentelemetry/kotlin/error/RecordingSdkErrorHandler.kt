@@ -12,6 +12,9 @@ internal class RecordingSdkErrorHandler : SdkErrorHandler {
 
     val errors = mutableListOf<SdkError>()
 
+    val misuses: List<SdkError.ApiMisuse> get() = errors.filterIsInstance<SdkError.ApiMisuse>()
+    val userCodeErrors: List<SdkError.UserCodeError> get() = errors.filterIsInstance<SdkError.UserCodeError>()
+
     override fun onError(error: SdkError) {
         errors += error
     }

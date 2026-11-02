@@ -2,6 +2,7 @@ package io.opentelemetry.kotlin.context
 
 import io.opentelemetry.kotlin.ExperimentalApi
 import io.opentelemetry.kotlin.ThreadLocal
+import io.opentelemetry.kotlin.framework.resetProcessWideState
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
@@ -165,6 +166,26 @@ internal class CoroutineContextElementTest {
         assertTrue(ctx.attachCount.get() > 1, "expected repeated attaches, got ${ctx.attachCount.get()}")
         assertEquals(ctx.attachCount.get(), ctx.detachCount.get())
         assertSame(storage.root, storage.current())
+    }
+
+    @Test
+    fun testWithInstalledThreadLocalStorage() = runBlocking {
+        installContextStorage(createThreadLocalCurrentContextStorage())
+        try {
+            val key = createContextKey<String>("key")
+            val ctx = rootContext().set(key, "value")
+            val dispatcher = singleThreadDispatcher("other")
+            withContext(ctx.asCoroutineContextElement()) {
+                assertSame(ctx, currentContext())
+                withContext(dispatcher) {
+                    assertSame(ctx, currentContext())
+                }
+            }
+            dispatcher.close()
+            assertSame(rootContext(), currentContext())
+        } finally {
+            resetProcessWideState()
+        }
     }
 
     private fun singleThreadDispatcher(name: String): ExecutorCoroutineDispatcher =

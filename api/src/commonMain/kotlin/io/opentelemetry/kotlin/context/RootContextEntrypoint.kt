@@ -9,11 +9,11 @@ private val ROOT_CONTEXT: Context = ContextValue(ProcessWideContextStorageSlot)
  * Returns the root [Context], which holds no values. The same instance is returned on every call.
  *
  * Calling [Context.attach] on the root context, or on any context derived from it, is a no-op
- * until a CurrentContextStorage is installed.
+ * until a [CurrentContextStorage] is installed. See [installContextStorage].
  *
  * This does not require an [io.opentelemetry.kotlin.OpenTelemetry] instance.
  *
  * https://opentelemetry.io/docs/specs/otel/context/
  */
 @ExperimentalApi
-internal fun rootContext(): Context = ROOT_CONTEXT
+public fun rootContext(): Context = ROOT_CONTEXT

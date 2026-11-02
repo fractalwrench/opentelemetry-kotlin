@@ -19,7 +19,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalApi::class, TempContextStandInApi::class)
+@OptIn(ExperimentalApi::class)
 internal class CurrentContextEntrypointTest {
 
     private class SlotStorage : CurrentContextStorage {
@@ -167,15 +167,15 @@ internal class CurrentContextEntrypointTest {
 
     @Test
     fun testStandIns() {
-        assertSame(rootContext(), internalRootContext())
-        assertSame(rootContext(), internalCurrentContext())
+        assertSame(rootContext(), rootContext())
+        assertSame(rootContext(), currentContext())
 
         val storage = SlotStorage()
-        assertTrue(internalInstallContextStorage(storage))
+        assertTrue(installContextStorage(storage))
         val ctx = rootContext().set(key, "value")
         ctx.attach()
-        assertSame(ctx, internalCurrentContext())
-        assertTrue(internalUninstallContextStorage(storage))
-        assertSame(rootContext(), internalCurrentContext())
+        assertSame(ctx, currentContext())
+        assertTrue(uninstallContextStorage(storage))
+        assertSame(rootContext(), currentContext())
     }
 }

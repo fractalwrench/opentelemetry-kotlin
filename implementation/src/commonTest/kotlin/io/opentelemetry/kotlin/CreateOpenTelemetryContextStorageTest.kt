@@ -2,9 +2,9 @@ package io.opentelemetry.kotlin
 
 import io.opentelemetry.kotlin.context.CurrentContextStorage
 import io.opentelemetry.kotlin.context.FakeCurrentContextStorage
+import io.opentelemetry.kotlin.context.ProcessWideStateOwner
 import io.opentelemetry.kotlin.context.createSingleSlotCurrentContextStorage
 import io.opentelemetry.kotlin.context.createThreadLocalCurrentContextStorage
-import io.opentelemetry.kotlin.factory.ContextFactoryImpl
 import io.opentelemetry.kotlin.framework.SdkTracker
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -38,6 +38,6 @@ internal class CreateOpenTelemetryContextStorageTest {
         val api = createOpenTelemetry {
             context { this.storage = storage }
         }.also(sdks::track)
-        assertSame(storage, assertIs<ContextFactoryImpl>(api.context).installedStorage)
+        assertSame(storage, assertIs<ProcessWideStateOwner>(api).installedStorage)
     }
 }
