@@ -36,6 +36,7 @@ suspend fun runAllExamples(platform: String) {
     demonstrateBasicSpan(tracer)
     demonstrateComplexSpan(tracer)
     demonstrateSpanNesting(tracer)
+    demonstrateContextApi(tracer)
     demonstrateBasicLogging(logger)
     demonstrateComplexLogging(logger)
 

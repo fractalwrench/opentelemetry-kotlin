@@ -108,7 +108,7 @@ Usually the SDK installs a storage for you when it's created:
 
 ```kotlin context-storage-dsl
 val otel = createOpenTelemetry {
-    context { storage = createThreadLocalCurrentContextStorage() }
+    context { storage { createThreadLocalCurrentContextStorage() } }
 }
 ```
 
@@ -131,3 +131,43 @@ fun installStorage() {
 The first install wins. `installContextStorage` wraps the storage so that misuse, such as
 detaching scopes out of order, and anything the storage throws are reported instead of
 propagating.
+
+### Layered context storage
+
+`CurrentContextStorage` is small enough to compose in user code. For example, a precedence storage
+with any number of slots (here `hyper_local > local > global`) returns the first slot that isn't
+empty, and routes each attach to a slot named by a `ContextKey` the context carries:
+
+```kotlin context-storage-layered
+enum class Slot { HYPER_LOCAL, LOCAL, GLOBAL }
+
+private val SLOT: ContextKey<Slot> = createContextKey("slot")
+
+fun Context.inSlot(slot: Slot): Context = set(SLOT, slot)
+
+class PrecedenceContextStorage : CurrentContextStorage {
+    private val slots = mapOf(
+        Slot.HYPER_LOCAL to createThreadLocalCurrentContextStorage(),
+        Slot.LOCAL to createThreadLocalCurrentContextStorage(),
+        Slot.GLOBAL to createSingleSlotCurrentContextStorage(),
+    )
+
+    override fun current(): Context =
+        Slot.entries.map { slots.getValue(it).current() }.firstOrNull { it !== rootContext() } ?: rootContext()
+
+    override fun attach(context: Context): Scope =
+        slots.getValue(context.get(SLOT) ?: Slot.GLOBAL).attach(context)
+}
+
+fun useLayeredStorage(span: Span) {
+    installContextStorage(PrecedenceContextStorage())
+    rootContext().inSlot(Slot.LOCAL).storeSpan(span).runWithContext { /* ... */ }
+}
+```
+
+This works because empty storages return the `rootContext()` instance, the factories return
+independent instances, and the API never assumes that `attach(ctx)` makes `ctx` current. Note that:
+
+- contexts derived from one in a slot keep its `SLOT` value, so they attach to the same slot;
+- the whole context comes from one slot. `Context` can't list its keys, so there is no per-key
+  fallthrough across slots (span and baggage can be combined by hand with `extractSpan()`/`extractBaggage()`).

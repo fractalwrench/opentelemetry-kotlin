@@ -32,3 +32,12 @@ public fun installContextStorage(storage: CurrentContextStorage): Boolean =
 @ExperimentalApi
 public fun uninstallContextStorage(storage: CurrentContextStorage): Boolean =
     ProcessWideContextStorageSlot.uninstall(storage)
+
+/**
+ * Uninstalls any process-wide [CurrentContextStorage], regardless of who installed it. Call it in
+ * `@AfterTest`, never in a `@BeforeTest` that runs alongside another `@BeforeTest` that creates an SDK.
+ */
+@ProcessWideStateTestingApi
+public fun resetContextStorageForTesting() {
+    ProcessWideContextStorageSlot.reset()
+}

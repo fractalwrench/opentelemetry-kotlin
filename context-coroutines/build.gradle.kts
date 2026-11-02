@@ -18,6 +18,7 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(project(":test-fakes"))
+                implementation(project(":context-threadlocal"))
                 implementation(libs.kotlinx.coroutines.test)
             }
         }

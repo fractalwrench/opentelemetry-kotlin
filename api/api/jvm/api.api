@@ -162,6 +162,7 @@ public final class io/opentelemetry/kotlin/context/ContextKeyEntrypointKt {
 
 public final class io/opentelemetry/kotlin/context/ContextStorageEntrypointKt {
 	public static final fun installContextStorage (Lio/opentelemetry/kotlin/context/CurrentContextStorage;)Z
+	public static final fun resetContextStorageForTesting ()V
 	public static final fun uninstallContextStorage (Lio/opentelemetry/kotlin/context/CurrentContextStorage;)Z
 }
 
@@ -173,6 +174,9 @@ public final class io/opentelemetry/kotlin/context/CurrentContextEntrypointKt {
 public abstract interface class io/opentelemetry/kotlin/context/CurrentContextStorage {
 	public abstract fun attach (Lio/opentelemetry/kotlin/context/Context;)Lio/opentelemetry/kotlin/context/Scope;
 	public abstract fun current ()Lio/opentelemetry/kotlin/context/Context;
+}
+
+public abstract interface annotation class io/opentelemetry/kotlin/context/ProcessWideStateTestingApi : java/lang/annotation/Annotation {
 }
 
 public final class io/opentelemetry/kotlin/context/RootContextEntrypointKt {

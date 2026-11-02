@@ -41,6 +41,8 @@ public interface Context {
      * If no [CurrentContextStorage] is installed this is a no-op, and the returned [Scope] does
      * nothing when detached.
      *
+     * Prefer [runWithContext], which cannot leak the [Scope].
+     *
      * Neglecting to close the [Scope] once the 'execution unit' of the context
      * has finished is considered a programming error that will leak resources.
      *

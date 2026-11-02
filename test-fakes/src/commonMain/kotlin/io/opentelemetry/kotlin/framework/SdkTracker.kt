@@ -23,9 +23,14 @@ class SdkTracker {
         sdks.add(sdk)
     }
 
+    /**
+     * Shuts down every tracked SDK, then resets process-wide state. The reset matters on JS, where
+     * shutdown can't block, so an SDK's storage might otherwise still be installed in the next test.
+     */
     fun shutdownAll() {
         sdks.forEach { it.shutdownForTest() }
         sdks.clear()
+        resetProcessWideState()
     }
 }
 

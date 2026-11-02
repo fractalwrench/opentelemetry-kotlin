@@ -137,6 +137,15 @@ internal class CurrentContextEntrypointTest {
         assertFalse(uninstallContextStorage(storage))
     }
 
+    @OptIn(ProcessWideStateTestingApi::class)
+    @Test
+    fun testResetForTestingEmptiesSlot() {
+        assertTrue(installContextStorage(SlotStorage()))
+        resetContextStorageForTesting()
+        assertNull(ProcessWideContextStorageSlot.installed())
+        assertSame(rootContext(), currentContext())
+    }
+
     @Test
     fun testInstalledStorageIsWrapped() {
         val storage = SlotStorage()
