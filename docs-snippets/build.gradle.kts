@@ -13,6 +13,7 @@ kotlin {
                 implementation(project(":config-declarative"))
                 implementation(project(":context-threadlocal"))
                 implementation(project(":context-single-slot"))
+                implementation(project(":semconv"))
             }
         }
         getByName("jvmAndAndroidMain") {

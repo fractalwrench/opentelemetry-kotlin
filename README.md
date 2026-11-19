@@ -4,7 +4,66 @@
 An implementation of the [OpenTelemetry specification](https://opentelemetry.io/docs/specs/otel/) as a Kotlin
 Multiplatform Library.
 
-Please read [the docs](https://opentelemetry.io/docs/languages/kotlin/getting-started/) to get started.
+## Quickstart
+
+Add the BOM, the SDK and the OTLP exporter:
+
+```kotlin getting-started-install
+dependencies {
+    implementation(platform("io.opentelemetry.kotlin:bom:0.10.0"))
+    implementation("io.opentelemetry.kotlin:implementation")
+    implementation("io.opentelemetry.kotlin:exporters-otlp")
+}
+```
+
+Create the SDK and record a span:
+
+```kotlin readme-quickstart
+suspend fun main() {
+    val otel = createOpenTelemetry {
+        serviceName = "my-service"
+        tracerProvider {
+            export {
+                batchSpanProcessor(
+                    otlpHttpSpanExporter {
+                        endpoint = "http://localhost:4318" // override with your collector's URL
+                    }
+                )
+            }
+        }
+    }
+    otel.tracerProvider.getTracer("com.example").startSpan("hello").end()
+    otel.shutdown() // flushes buffered spans before stopping
+}
+```
+
+The APIs are marked `@ExperimentalApi` while the project is pre-1.0, so this compiles with a warning
+until you [opt in](docs/getting-started.md#3-opt-in-to-experimental-apis).
+
+## Documentation
+
+See the [docs](docs/README.md) for guides on getting started, context, propagation and compat mode.
+
+## Artifacts
+
+All artifacts are published under the `io.opentelemetry.kotlin` group. Import the `bom` and omit the
+version on the others.
+
+| Purpose                 | Artifact                                                                                                                                                   |
+|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| BOM                     | [`bom`](bom), or [`compat-bom`](compat-bom) when using `compat`                                                                                            |
+| SDK entry point         | [`implementation`](implementation) or [`compat`](compat) (pick one)                                                                                        |
+| API for library authors | [`api`](api), with [`noop`](noop) as a no-op implementation                                                                                                |
+| Exporters               | [`exporters-otlp`](exporters-otlp), [`exporters-persistence`](exporters-persistence), [`exporters-in-memory`](exporters-in-memory) (tests)                 |
+| Configuration           | [`config-declarative`](config-declarative) (YAML config files)                                                                                             |
+| Context storage         | [`context-threadlocal`](context-threadlocal), [`context-single-slot`](context-single-slot), `context-coroutines`                                           |
+| Propagators             | [`propagator-b3`](propagator-b3)                                                                                                                           |
+| Sampling and processing | [`sampler-remote`](sampler-remote), [`span-event-bridge`](span-event-bridge)                                                                               |
+| Instrumentation         | [`instrumentation-ktor-client`](instrumentation/instrumentation-ktor-client), [`instrumentation-ktor-server`](instrumentation/instrumentation-ktor-server) |
+| Semantic conventions    | [`semconv`](semconv)                                                                                                                                       |
+| Extensions              | `sdk-ext`                                                                                                                                                  |
+
+Other published artifacts are internal. Don't depend on them directly.
 
 ### Supported targets
 

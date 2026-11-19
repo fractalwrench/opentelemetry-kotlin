@@ -5,6 +5,7 @@ in a dashboard. Platform-specific instructions can be found at the end of the do
 
 - [1. Pick a mode](#1-pick-a-mode)
 - [2. Install](#2-install)
+    - [Optional: semantic conventions](#optional-semantic-conventions)
 - [3. Opt in to experimental APIs](#3-opt-in-to-experimental-apis)
 - [4. Initialize the SDK](#4-initialize-the-sdk)
 - [5. Record a span and a log](#5-record-a-span-and-a-log)
@@ -36,6 +37,18 @@ dependencies {
 
 For compat mode, depend on `compat` rather than `implementation`. See the
 [compat mode guide](compat.md#installing).
+
+### Optional: semantic conventions
+
+The `semconv` artifact provides constants for the attribute names defined by the
+[OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/).
+You can optionally add it as a dependency:
+
+```kotlin getting-started-install-semconv
+dependencies {
+    implementation("io.opentelemetry.kotlin:semconv")
+}
+```
 
 ## 3. Opt in to experimental APIs
 
